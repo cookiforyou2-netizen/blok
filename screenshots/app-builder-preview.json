@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Конструктор инструкций по охране труда — ychy-pro.ru",
+      "hasCanvas": false,
+      "bodyTextLen": 1847,
+      "bodyTextHash": "0f685cb840517b962bba33238838042f66f72e4d5623b31d91427afc7c55497c",
+      "bodyTextPrefix": "Конструктор ИОТ ychy-pro.ru Обзор Мастер Профессии Администриров",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Конструктор инструкций по охране труда — ychy-pro.ru",
+      "hasCanvas": false,
+      "bodyTextLen": 1811,
+      "bodyTextHash": "69bd2fea0e2dd361b71c9692d4467deec0dddff6015714312352653dfa233624",
+      "bodyTextPrefix": "Конструктор ИОТ ychy-pro.ru Меню YCHY-PRO.RU Конструктор инструк",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

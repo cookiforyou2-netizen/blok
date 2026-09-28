@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Конструктор инструкций по охране труда — ychy-pro.ru",
+      "hasCanvas": false,
+      "bodyTextLen": 1883,
+      "bodyTextHash": "fa7e8f4b43d6ce0b0e16700e33a3b24cf3aa83cea745b83b1591628c0c349bdb",
+      "bodyTextPrefix": "Конструктор ИОТ ychy-pro.ru Обзор Мастер Профессии Пакет Админис",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Конструктор инструкций по охране труда — ychy-pro.ru",
+      "hasCanvas": false,
+      "bodyTextLen": 1841,
+      "bodyTextHash": "9817b0b7a4487b8973f98f539c25c4b6d705acf853215d3acb8e90164b4e03d3",
+      "bodyTextPrefix": "Конструктор ИОТ ychy-pro.ru Меню YCHY-PRO.RU Конструктор инструк",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}
