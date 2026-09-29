@@ -1,48 +1,18 @@
-import type { Applicability, DataRequirement, DocumentModule, PackageExtension } from "../types";
+import type { Applicability, DocumentModule, PackageExtension } from "../types";
+import { SHARED_REQUISITES } from "../requisites";
 
 const CHECK = "Нормативное основание требует проверки";
-
-const ORG_NAME: DataRequirement = {
-  id: "organization.name",
-  label: "Название организации",
-  field: "name",
-  key: "value",
-};
-
-const DIRECTOR: DataRequirement = {
-  id: "organization.director",
-  label: "Руководитель",
-  field: "director",
-  key: "value",
-};
-
-const ADDRESS: DataRequirement = {
-  id: "organization.address",
-  label: "Адрес",
-  field: "address",
-  key: "value",
-};
-
-const RESPONSIBLE: DataRequirement = {
-  id: "responsiblePerson",
-  label: "Ответственный за охрану труда",
-  field: "responsible",
-  key: "value",
-};
-
-const APPROVAL_DATE: DataRequirement = {
-  id: "approvalDate",
-  label: "Дата приказа",
-  field: "approval_date",
-  key: "value",
-};
 
 const HAS_PROFESSIONS: Applicability = {
   any: [{ field: "profession", present: true }, { field: "custom_profession", present: true }],
 };
 
+/** УШМ, дрель и признак «электроинструмент» — тот же resolver фактов. Генератор это правило не читает. */
 const POWER_TOOLS: Applicability = {
-  any: [{ field: "equipment", in: ["angle_grinder", "drill"] }, { field: "flag", in: ["powerTools"] }],
+  any: [
+    { field: "equipment", in: ["angle_grinder", "drill"] },
+    { field: "flag", in: ["powerTools"] },
+  ],
 };
 
 function doc(init: {
@@ -51,9 +21,6 @@ function doc(init: {
   category: DocumentModule["category"];
   shape: DocumentModule["shape"];
   applicability: Applicability;
-  requiredData?: DataRequirement[];
-  templateId?: string | null;
-  generatorId?: string | null;
 }): DocumentModule {
   return {
     id: init.code,
@@ -66,14 +33,15 @@ function doc(init: {
     applicability: init.applicability,
     dependencies: [],
     normativeBasis: CHECK,
-    template: init.templateId ?? null,
-    templateId: init.templateId ?? null,
+    template: `tpl_${init.code}`,
+    templateId: `tpl_${init.code}`,
     generator: "none",
-    generatorId: init.generatorId ?? null,
-    requiredData: init.requiredData ?? [ORG_NAME],
+    generatorId: init.code,
+    requiredData: SHARED_REQUISITES,
     commercialLevel: "PACKAGE",
     optional: false,
     moduleId: "core_osh",
+    normativeStatus: "needs_review",
   };
 }
 
@@ -85,9 +53,6 @@ export const CORE_OSH_DOCUMENTS: DocumentModule[] = [
     category: "organization",
     shape: "order",
     applicability: {},
-    requiredData: [ORG_NAME, DIRECTOR, ADDRESS, RESPONSIBLE, APPROVAL_DATE],
-    templateId: "tpl_osh_order_responsible",
-    generatorId: "osh_order_responsible",
   }),
   doc({
     code: "osh_policy_suot",

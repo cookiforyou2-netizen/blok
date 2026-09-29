@@ -16,16 +16,19 @@ function Home() {
 
   return (
     <AppShell>
-      <section className="grid items-center gap-8 md:grid-cols-[1.3fr_0.7fr]">
+      <section className="md:grid md:grid-cols-[1.3fr_0.7fr] md:items-center md:gap-8">
         <div>
-          <p className="text-sm font-bold uppercase tracking-wide text-primary">ychy-pro.ru</p>
+          <div className="flex items-center gap-3">
+            <img src="/brand/ychy-logo.jpg" alt="" className="size-14 rounded-full object-cover md:hidden" />
+            <p className="text-sm font-bold uppercase tracking-wide text-primary">ychy-pro.ru</p>
+          </div>
           <h1 className="mt-2 max-w-xl text-3xl font-extrabold leading-tight text-ink md:text-5xl">
             Конструктор инструкций по охране труда
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-muted">
-            Инструкция собирается не по названию профессии, а по фактическим работам, оборудованию, опасностям и условиям. Модель формулирует текст, факты берутся из библиотеки модулей.
+          <p className="mt-3 max-w-xl text-base leading-relaxed text-muted">
+            Инструкция собирается по фактическим работам, оборудованию, опасностям и условиям труда.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-5 flex flex-wrap gap-3">
             <Link to="/wizard" search={{ scenario: undefined, profession: undefined }} className="rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-ink">
               Собрать инструкцию
             </Link>
@@ -37,10 +40,10 @@ function Home() {
             </Link>
           </div>
         </div>
-        <img src="/brand/ychy-logo.jpg" alt="" className="mx-auto size-48 rounded-full object-cover md:size-64" />
+        <img src="/brand/ychy-logo.jpg" alt="" className="mx-auto hidden size-64 rounded-full object-cover md:block" />
       </section>
 
-      <section className="mt-10 rounded-2xl border border-line bg-surface p-5">
+      <section className="mt-6 rounded-2xl border border-line bg-surface p-5">
         <h2 className="text-lg font-extrabold">Формула сборки</h2>
         <p className="mt-3 text-sm font-semibold leading-relaxed text-ink">
           Профессия → работы → опасности → риски → оборудование → инструмент → условия → меры → ИОТ
@@ -58,9 +61,9 @@ function Home() {
       </section>
 
       <section className="mt-6 rounded-2xl border border-line bg-surface p-5">
-        <h2 className="text-lg font-extrabold">Один модуль — много профессий</h2>
+        <h2 className="text-lg font-extrabold">Инструмент учитывается только если он есть</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Модуль «Угловая шлифовальная машина (УШМ)» не копируется в каждую инструкцию. Его подключают только если инструмент подтверждён. Сейчас он предложен профессиям:
+          Угловая шлифовальная машина попадает в инструкцию только когда она подтверждена. Сейчас она предложена таким профессиям:
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {grinderUsers.map((item) => (
@@ -72,7 +75,7 @@ function Home() {
       </section>
 
       <section className="mt-6">
-        <h2 className="text-lg font-extrabold">Пять полных моделей</h2>
+        <h2 className="text-lg font-extrabold">Примеры профессий</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {full.map((item) => (
             <Link key={item.meta.id} to="/wizard" search={{ profession: item.meta.id, scenario: undefined }} className="rounded-xl border border-line bg-surface p-4">

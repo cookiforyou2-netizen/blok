@@ -1,4 +1,4 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-Cu5F4Ri7.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-sTd0qImO.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "/workspace/src/routes/__root.tsx",
@@ -11,7 +11,7 @@ var tsrStartManifest = () => ({ routes: {
 			"/instruction/$id"
 		],
 		preloads: [
-			"/assets/index-Dot_wfB_.js",
+			"/assets/index-Xuvtf3rB.js",
 			"/assets/rolldown-runtime-W7wSyTde.js",
 			"/assets/link-D5-nJzUI.js",
 			"/assets/lazyRouteComponent-XSgBMURn.js",
@@ -20,19 +20,19 @@ var tsrStartManifest = () => ({ routes: {
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-Dot_wfB_.js"
+			src: "/assets/index-Xuvtf3rB.js"
 		} }]
 	},
 	"/": {
 		filePath: "/workspace/src/routes/index.tsx",
 		children: void 0,
-		preloads: ["/assets/routes-BtOXv0uj.js", "/assets/shell-BDUCfuaK.js"]
+		preloads: ["/assets/routes-DrKFXQUI.js", "/assets/shell-BDUCfuaK.js"]
 	},
 	"/admin": {
 		filePath: "/workspace/src/routes/admin.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/admin-Dx6Vh-GG.js",
+			"/assets/admin-BrcRYk2j.js",
 			"/assets/shell-BDUCfuaK.js",
 			"/assets/types-WS2hu6lx.js"
 		]
@@ -41,7 +41,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/workspace/src/routes/catalog.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/catalog-fXe9PBzV.js",
+			"/assets/catalog-Bp_KhfJV.js",
 			"/assets/shell-BDUCfuaK.js",
 			"/assets/types-WS2hu6lx.js"
 		]
@@ -50,7 +50,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/workspace/src/routes/package.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/package-CBSz_lZ4.js",
+			"/assets/package-BwSNtnUg.js",
 			"/assets/shell-BDUCfuaK.js",
 			"/assets/types-WS2hu6lx.js"
 		]
@@ -59,7 +59,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/workspace/src/routes/wizard.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/wizard-Crwm5jvR.js",
+			"/assets/wizard-BBZpYtOr.js",
 			"/assets/shell-BDUCfuaK.js",
 			"/assets/types-WS2hu6lx.js"
 		]
@@ -67,7 +67,7 @@ var tsrStartManifest = () => ({ routes: {
 	"/instruction/$id": {
 		filePath: "/workspace/src/routes/instruction.$id.tsx",
 		children: void 0,
-		preloads: ["/assets/instruction._id-Hzhhz1GF.js", "/assets/shell-BDUCfuaK.js"]
+		preloads: ["/assets/instruction._id-COiaMX7M.js", "/assets/shell-BDUCfuaK.js"]
 	}
 } });
 //#endregion

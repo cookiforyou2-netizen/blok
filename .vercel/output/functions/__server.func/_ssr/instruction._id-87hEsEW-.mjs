@@ -1,8 +1,8 @@
 import { w as require_jsx_runtime, x as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { g as useApp, l as SECTION_LABEL, n as AppShell, t as APPROVAL_LINES } from "./shell-DGAyvdZq.mjs";
 import { n as toast } from "../_libs/sonner.mjs";
-import { n as Route } from "./router-CtCeWBuz.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/instruction._id-C8D3XuM7.js
+import { n as Route } from "./router-CcjaMekW.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/instruction._id-87hEsEW-.js
 var import_jsx_runtime = require_jsx_runtime();
 var TRANSLIT = {
 	а: "a",
@@ -211,7 +211,7 @@ function InstructionPage() {
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 					className: `rounded-full px-3 py-2 text-sm font-bold ${record.qualityPassed ? "bg-accent-soft text-accent" : "bg-danger-soft text-danger"}`,
-					children: record.qualityPassed ? "Quality Gate пройден" : "Не готово: Quality Gate не пройден"
+					children: record.qualityPassed ? "Проверка пройдена" : "Не готово: проверка не пройдена"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 					type: "button",
@@ -251,7 +251,7 @@ function InstructionPage() {
 			children: [
 				!record.qualityPassed && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mb-4 text-sm font-bold text-danger",
-					children: "ПРОЕКТ НЕ ГОТОВ — QUALITY GATE НЕ ПРОЙДЕН"
+					children: "ПРОЕКТ НЕ ГОТОВ — ПРОВЕРКА НЕ ПРОЙДЕНА"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "mb-4 flex justify-end",

@@ -54,6 +54,17 @@ export function workflowOf(item: PackageItem, profile: OrganizationProfile, form
   return "defined";
 }
 
+export function packageReadiness(items: PackageItem[], profile: OrganizationProfile, formedIds: readonly string[]) {
+  const rows = items
+    .filter((item) => item.document.moduleId === "core_osh")
+    .map((item) => ({ item, workflow: workflowOf(item, profile, formedIds) }));
+  return {
+    ready: rows.filter((row) => row.workflow === "ready_to_generate" || row.workflow === "formed"),
+    clarify: rows.filter((row) => row.workflow === "clarify"),
+    needsData: rows.filter((row) => row.workflow === "needs_data"),
+  };
+}
+
 export function createPackageSnapshot(
   profile: OrganizationProfile,
   composition: PackageComposition,

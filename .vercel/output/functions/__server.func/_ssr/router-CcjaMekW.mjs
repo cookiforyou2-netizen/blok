@@ -3,7 +3,7 @@ import { C as useRouter, X as require_react, _ as Outlet, b as createRootRoute, 
 import { t as Toaster } from "../_libs/sonner.mjs";
 import { t as TriangleAlert } from "../_libs/lucide-react.mjs";
 import { a as union, i as string, n as number, r as object, t as literal } from "../_libs/zod.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-CtCeWBuz.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-CcjaMekW.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -307,7 +307,7 @@ function PreviewHostBridge() {
 	}, [router]);
 	return null;
 }
-var styles_default = "/assets/styles-CSp8qgKb.css";
+var styles_default = "/assets/styles-BiLVB35r.css";
 var Route$6 = createRootRoute({
 	head: () => ({
 		meta: [
@@ -369,15 +369,15 @@ var Route$6 = createRootRoute({
 		] })]
 	})
 });
-var $$splitComponentImporter$5 = () => import("./routes-4G9GxDrx.mjs");
+var $$splitComponentImporter$5 = () => import("./routes-DDWQpgA9.mjs");
 var Route$5 = createFileRoute("/")({ component: lazyRouteComponent($$splitComponentImporter$5, "component") });
-var $$splitComponentImporter$4 = () => import("./admin-YxSF0lJa.mjs");
+var $$splitComponentImporter$4 = () => import("./admin-C4M4Ycfe.mjs");
 var Route$4 = createFileRoute("/admin")({ component: lazyRouteComponent($$splitComponentImporter$4, "component") });
-var $$splitComponentImporter$3 = () => import("./catalog-B_pVlTtM.mjs");
+var $$splitComponentImporter$3 = () => import("./catalog-CvwFMiuL.mjs");
 var Route$3 = createFileRoute("/catalog")({ component: lazyRouteComponent($$splitComponentImporter$3, "component") });
-var $$splitComponentImporter$2 = () => import("./package-BBxa41NM.mjs");
+var $$splitComponentImporter$2 = () => import("./package-CJ8vvphK.mjs");
 var Route$2 = createFileRoute("/package")({ component: lazyRouteComponent($$splitComponentImporter$2, "component") });
-var $$splitComponentImporter$1 = () => import("./wizard-BQVn1itW.mjs");
+var $$splitComponentImporter$1 = () => import("./wizard-CStuh4bR.mjs");
 var Route$1 = createFileRoute("/wizard")({
 	validateSearch: (search) => ({
 		scenario: search.scenario === "shop" || search.scenario === "site" ? search.scenario : void 0,
@@ -385,7 +385,7 @@ var Route$1 = createFileRoute("/wizard")({
 	}),
 	component: lazyRouteComponent($$splitComponentImporter$1, "component")
 });
-var $$splitComponentImporter = () => import("./instruction._id-C8D3XuM7.mjs");
+var $$splitComponentImporter = () => import("./instruction._id-87hEsEW-.mjs");
 var Route = createFileRoute("/instruction/$id")({ component: lazyRouteComponent($$splitComponentImporter, "component") });
 var rootRouteChildren = {
 	IndexRoute: Route$5.update({

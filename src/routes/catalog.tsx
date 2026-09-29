@@ -19,9 +19,9 @@ function CatalogPage() {
 
   return (
     <AppShell>
-      <h1 className="text-2xl font-extrabold">Каталог профессий</h1>
+      <h1 className="text-2xl font-extrabold">100 профессий</h1>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
-        В каталоге {catalog.professions.length} профессий. Пять имеют полную модель. Остальные готовы к отраслевым пакетам и уже могут подключать общие модули: УШМ, строповку, автомобиль, самоходную машину, кухню, уборку.
+        Выберите профессию. Инструкция будет собрана с учётом выполняемых работ, оборудования, инструмента и условий труда.
       </p>
       <div className="mt-4 flex flex-col gap-2 md:flex-row">
         <input className="rounded-xl border border-line bg-surface px-3 py-3 md:flex-1" placeholder="Найти профессию" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -35,15 +35,8 @@ function CatalogPage() {
       <div className="mt-4 grid gap-2">
         {items.map((item) => (
           <Link key={item.meta.id} to="/wizard" search={{ profession: item.meta.id, scenario: undefined }} className="rounded-xl border border-line bg-surface px-4 py-3">
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="font-extrabold">{item.meta.title}</span>
-              <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.depth === "full" ? "bg-accent-soft text-accent" : "bg-soft text-primary"}`}>
-                {item.depth === "full" ? "полная модель" : "каталог"}
-              </span>
-            </span>
-            <span className="mt-1 block text-sm text-muted">
-              {CATEGORIES.find((category) => category.id === item.category)?.title}. Модулей в предложении: {item.suggestedWorkIds.length + item.suggestedGearIds.length}. Версия {item.meta.version}.
-            </span>
+            <span className="block font-extrabold">{item.meta.title}</span>
+            <span className="mt-1 block text-sm text-muted">{CATEGORIES.find((entry) => entry.id === item.category)?.title}</span>
           </Link>
         ))}
       </div>

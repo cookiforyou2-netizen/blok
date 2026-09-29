@@ -104,9 +104,13 @@ export const FACT_FIELDS = [
   "inn",
   "headcount",
   "director",
+  "director_title",
   "address",
   "responsible",
+  "responsible_title",
   "approval_date",
+  "short_name",
+  "city",
 ] as const;
 
 export type FactField = (typeof FACT_FIELDS)[number];
@@ -217,6 +221,8 @@ export interface DocumentModule {
   generator: "instruction" | "none";
   generatorId?: string | null;
   requiredData?: DataRequirement[];
+  /** В данные документа, не в текст для пользователя: основание ещё не проверено. */
+  normativeStatus?: "needs_review";
   commercialLevel: CommercialLevel;
   optional: boolean;
   /** Какой отраслевой пакет зарегистрировал документ. Ядро каталога — «core». */

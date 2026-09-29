@@ -59,6 +59,7 @@
     "date-fns": "^4.0.0",
     "docx": "^9.7.2",
     "jose": "6.2.9",
+    "jszip": "^3.10.2",
     "kysely": "^0.28.5",
     "lightningcss": "^1.28.0",
     "lucide-react": "^0.510.0",

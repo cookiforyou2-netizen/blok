@@ -113,7 +113,7 @@ function WizardPage() {
                   key={item.meta.id}
                   checked={draft.professionId === item.meta.id}
                   title={item.meta.title}
-                  text={`${CATEGORIES.find((category) => category.id === item.category)?.title} · ${item.depth === "full" ? "полная модель" : "каталог"} · ${item.summary}`}
+                  text={`${CATEGORIES.find((category) => category.id === item.category)?.title ?? ""}${item.summary ? ` · ${item.summary}` : ""}`}
                   onToggle={() => selectProfession(item.meta.id)}
                 />
               ))}
@@ -226,7 +226,7 @@ function WizardPage() {
           <div className="rounded-2xl border border-line bg-surface p-5">
             <h2 className="text-lg font-extrabold">Проверка и сборка</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Перед выдачей сработает Quality Gate: пять разделов, опасности, риски, учёт только выбранного оборудования, отсутствие выдуманных пунктов нормативных актов и связь «опасность → мера». Если проверка не пройдена, документ останется проектом и не будет помечен как готовый.
+              Перед выдачей проверяется, что инструкция полная: пять разделов, опасности, меры и только выбранное оборудование. Нормы, которые не проверены, в текст не добавляются. Если проверка не пройдена, инструкция останется проектом.
             </p>
           </div>
         )}
@@ -276,7 +276,7 @@ function ModulePick({
       </div>
       {rest.length > 0 && (
         <button type="button" className="text-sm font-bold text-primary" onClick={() => setShowAll(!showAll)}>
-          {showAll ? "Скрыть остальную библиотеку" : "Показать всю библиотеку модулей"}
+          {showAll ? "Скрыть остальной список" : "Показать весь список"}
         </button>
       )}
     </>

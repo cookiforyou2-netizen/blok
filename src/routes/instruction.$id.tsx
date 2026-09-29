@@ -23,7 +23,7 @@ function InstructionPage() {
     <AppShell>
       <div className="no-print flex flex-wrap items-center gap-2">
         <span className={`rounded-full px-3 py-2 text-sm font-bold ${record.qualityPassed ? "bg-accent-soft text-accent" : "bg-danger-soft text-danger"}`}>
-          {record.qualityPassed ? "Quality Gate пройден" : "Не готово: Quality Gate не пройден"}
+          {record.qualityPassed ? "Проверка пройдена" : "Не готово: проверка не пройдена"}
         </span>
         <button type="button" className="rounded-full bg-primary px-4 py-3 text-sm font-bold text-primary-ink" onClick={() => void downloadDocx(doc, record.qualityPassed)}>DOCX</button>
         <button type="button" className="rounded-full bg-primary px-4 py-3 text-sm font-bold text-primary-ink" onClick={() => void downloadPdf(doc, record.qualityPassed)}>PDF</button>
@@ -44,7 +44,7 @@ function InstructionPage() {
         </ul>
       )}
       <article className="print-sheet mt-4 rounded-2xl border border-line bg-surface px-5 py-6 font-doc text-ink md:px-10">
-        {!record.qualityPassed && <p className="mb-4 text-sm font-bold text-danger">ПРОЕКТ НЕ ГОТОВ — QUALITY GATE НЕ ПРОЙДЕН</p>}
+        {!record.qualityPassed && <p className="mb-4 text-sm font-bold text-danger">ПРОЕКТ НЕ ГОТОВ — ПРОВЕРКА НЕ ПРОЙДЕНА</p>}
         <div className="mb-4 flex justify-end">
           <div className="text-right text-sm leading-relaxed">
             {APPROVAL_LINES.map((line) => (

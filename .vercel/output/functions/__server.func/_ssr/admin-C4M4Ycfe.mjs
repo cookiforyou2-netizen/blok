@@ -3,7 +3,7 @@ import { X as require_react, w as require_jsx_runtime, x as Link } from "../_lib
 import { g as useApp, m as professionsUsingModule, n as AppShell, u as buildCatalog } from "./shell-DGAyvdZq.mjs";
 import { t as CATEGORIES } from "./types--OpmHAgC.mjs";
 import { n as toast } from "../_libs/sonner.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/admin-YxSF0lJa.js
+//#region node_modules/.nitro/vite/services/ssr/assets/admin-C4M4Ycfe.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var TABS = [
@@ -38,8 +38,20 @@ function AdminPage() {
 			className: "mt-2 max-w-3xl text-sm leading-relaxed text-muted",
 			children: "Модуль меняется один раз. Инструкции, уже сформированные, хранят снимок версий. Новые сборки берут опубликованную версию. Нормативный текст не публикуется без шага «проверено человеком»."
 		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+			className: "mt-4 block text-sm font-bold md:hidden",
+			children: ["Раздел", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+				className: "mt-2 w-full rounded-xl border border-line bg-surface px-3 py-3 font-semibold",
+				value: tab,
+				onChange: (event) => setTab(event.target.value),
+				children: TABS.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+					value: item,
+					children: item
+				}, item))
+			})]
+		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "mt-4 flex gap-2 overflow-auto pb-2",
+			className: "mt-4 hidden gap-2 overflow-x-auto pb-2 md:flex",
 			children: TABS.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 				type: "button",
 				className: `shrink-0 rounded-full px-3 py-2 text-sm font-bold ${tab === item ? "bg-primary text-primary-ink" : "bg-surface text-ink"}`,

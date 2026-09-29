@@ -1,6 +1,6 @@
 import { w as require_jsx_runtime, x as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { g as useApp, m as professionsUsingModule, n as AppShell, u as buildCatalog } from "./shell-DGAyvdZq.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-4G9GxDrx.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DDWQpgA9.js
 var import_jsx_runtime = require_jsx_runtime();
 function Home() {
 	const instructions = useApp((state) => state.instructions);
@@ -10,22 +10,29 @@ function Home() {
 	const grinderUsers = professionsUsingModule(catalog, "angle_grinder");
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AppShell, { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-			className: "grid items-center gap-8 md:grid-cols-[1.3fr_0.7fr]",
+			className: "md:grid md:grid-cols-[1.3fr_0.7fr] md:items-center md:gap-8",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-sm font-bold uppercase tracking-wide text-primary",
-					children: "ychy-pro.ru"
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-3",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+						src: "/brand/ychy-logo.jpg",
+						alt: "",
+						className: "size-14 rounded-full object-cover md:hidden"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-sm font-bold uppercase tracking-wide text-primary",
+						children: "ychy-pro.ru"
+					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
 					className: "mt-2 max-w-xl text-3xl font-extrabold leading-tight text-ink md:text-5xl",
 					children: "Конструктор инструкций по охране труда"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-4 max-w-xl text-base leading-relaxed text-muted",
-					children: "Инструкция собирается не по названию профессии, а по фактическим работам, оборудованию, опасностям и условиям. Модель формулирует текст, факты берутся из библиотеки модулей."
+					className: "mt-3 max-w-xl text-base leading-relaxed text-muted",
+					children: "Инструкция собирается по фактическим работам, оборудованию, опасностям и условиям труда."
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mt-6 flex flex-wrap gap-3",
+					className: "mt-5 flex flex-wrap gap-3",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
 							to: "/wizard",
@@ -51,11 +58,11 @@ function Home() {
 			] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
 				src: "/brand/ychy-logo.jpg",
 				alt: "",
-				className: "mx-auto size-48 rounded-full object-cover md:size-64"
+				className: "mx-auto hidden size-64 rounded-full object-cover md:block"
 			})]
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-			className: "mt-10 rounded-2xl border border-line bg-surface p-5",
+			className: "mt-6 rounded-2xl border border-line bg-surface p-5",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 					className: "text-lg font-extrabold",
@@ -104,11 +111,11 @@ function Home() {
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 					className: "text-lg font-extrabold",
-					children: "Один модуль — много профессий"
+					children: "Инструмент учитывается только если он есть"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mt-2 text-sm leading-relaxed text-muted",
-					children: "Модуль «Угловая шлифовальная машина (УШМ)» не копируется в каждую инструкцию. Его подключают только если инструмент подтверждён. Сейчас он предложен профессиям:"
+					children: "Угловая шлифовальная машина попадает в инструкцию только когда она подтверждена. Сейчас она предложена таким профессиям:"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "mt-4 flex flex-wrap gap-2",
@@ -123,7 +130,7 @@ function Home() {
 			className: "mt-6",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 				className: "text-lg font-extrabold",
-				children: "Пять полных моделей"
+				children: "Примеры профессий"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mt-3 grid gap-3 md:grid-cols-2",
 				children: full.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {

@@ -1,16 +1,17 @@
 import type { DocumentModule, OrganizationProfile } from "../types";
-import { orderResponsibleTemplate } from "./order-responsible";
-import { fillTemplate, requirementValues, type DocTemplate, type GeneratedDocument } from "./template";
+import { CORE_OSH_DOCUMENTS } from "../modules/core-osh";
+import { renderCoreDocument } from "./core-render";
+import { fillTemplate, type DocTemplate, type GenerateContext, type GeneratedDocument } from "./template";
 
 /**
- * Генератор не смотрит на applicability и не решает, нужен ли документ.
- * Следующий документ подключается так: шаблон, функция generate, registerGenerator(id),
- * в карточке PackageDocument — templateId и generatorId. Экран пакета остаётся тем же.
+ * Генератор не смотрит, нужен ли документ.
+ * Следующий документ: шаблон или сборщик текста, registerGenerator(id),
+ * в карточке — templateId и generatorId. Экран пакета остаётся тем же.
  */
 export interface DocumentGenerator {
   id: string;
   templateId: string;
-  generate(profile: OrganizationProfile, document: DocumentModule): GeneratedDocument;
+  generate(profile: OrganizationProfile, document: DocumentModule, context?: GenerateContext): GeneratedDocument;
 }
 
 const templates = new Map<string, DocTemplate>();
@@ -32,20 +33,30 @@ export function templateById(id: string): DocTemplate | undefined {
   return templates.get(id);
 }
 
-export function generateById(id: string, profile: OrganizationProfile, document: DocumentModule): GeneratedDocument {
+export function generateById(id: string, profile: OrganizationProfile, document: DocumentModule, context?: GenerateContext): GeneratedDocument {
   const generator = generators.get(id);
   if (!generator) throw new Error(`Генератор не зарегистрирован: ${id}`);
-  return generator.generate(profile, document);
+  return generator.generate(profile, document, context);
 }
 
-const orderResponsibleGenerator: DocumentGenerator = {
-  id: "osh_order_responsible",
-  templateId: orderResponsibleTemplate.id,
-  generate(profile, document) {
-    const template = templates.get(document.templateId || orderResponsibleTemplate.id) ?? orderResponsibleTemplate;
-    return fillTemplate(template, requirementValues(profile, document.requiredData ?? []));
-  },
-};
+for (const document of CORE_OSH_DOCUMENTS) {
+  const templateId = document.templateId || `tpl_${document.code}`;
+  registerTemplate({ id: templateId, title: document.name, filename: document.code, blocks: [] });
+  registerGenerator({
+    id: document.generatorId || document.code,
+    templateId,
+    generate(profile, current, context) {
+      return renderCoreDocument(profile, current.generatorId ? current : document, context);
+    },
+  });
+}
 
-registerTemplate(orderResponsibleTemplate);
-registerGenerator(orderResponsibleGenerator);
+export function registerDemoGenerator() {
+  registerGenerator({
+    id: "demo_next",
+    templateId: "tpl_demo_next",
+    generate() {
+      return fillTemplate({ id: "tpl_demo_next", title: "Следующий документ", filename: "next", blocks: [{ kind: "body", text: "подключён" }] }, {});
+    },
+  });
+}

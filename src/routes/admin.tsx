@@ -28,7 +28,15 @@ function AdminPage() {
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
         Модуль меняется один раз. Инструкции, уже сформированные, хранят снимок версий. Новые сборки берут опубликованную версию. Нормативный текст не публикуется без шага «проверено человеком».
       </p>
-      <div className="mt-4 flex gap-2 overflow-auto pb-2">
+      <label className="mt-4 block text-sm font-bold md:hidden">
+        Раздел
+        <select className="mt-2 w-full rounded-xl border border-line bg-surface px-3 py-3 font-semibold" value={tab} onChange={(event) => setTab(event.target.value as (typeof TABS)[number])}>
+          {TABS.map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+        </select>
+      </label>
+      <div className="mt-4 hidden gap-2 overflow-x-auto pb-2 md:flex">
         {TABS.map((item) => (
           <button key={item} type="button" className={`shrink-0 rounded-full px-3 py-2 text-sm font-bold ${tab === item ? "bg-primary text-primary-ink" : "bg-surface text-ink"}`} onClick={() => setTab(item)}>
             {item}

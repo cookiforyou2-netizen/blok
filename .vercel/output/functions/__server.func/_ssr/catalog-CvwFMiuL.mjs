@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { X as require_react, w as require_jsx_runtime, x as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { g as useApp, n as AppShell, u as buildCatalog } from "./shell-DGAyvdZq.mjs";
 import { t as CATEGORIES } from "./types--OpmHAgC.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/catalog-B_pVlTtM.js
+//#region node_modules/.nitro/vite/services/ssr/assets/catalog-CvwFMiuL.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function CatalogPage() {
@@ -16,15 +16,11 @@ function CatalogPage() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AppShell, { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
 			className: "text-2xl font-extrabold",
-			children: "Каталог профессий"
+			children: "100 профессий"
 		}),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 			className: "mt-2 max-w-3xl text-sm leading-relaxed text-muted",
-			children: [
-				"В каталоге ",
-				catalog.professions.length,
-				" профессий. Пять имеют полную модель. Остальные готовы к отраслевым пакетам и уже могут подключать общие модули: УШМ, строповку, автомобиль, самоходную машину, кухню, уборку."
-			]
+			children: "Выберите профессию. Инструкция будет собрана с учётом выполняемых работ, оборудования, инструмента и условий труда."
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "mt-4 flex flex-col gap-2 md:flex-row",
@@ -55,25 +51,12 @@ function CatalogPage() {
 					scenario: void 0
 				},
 				className: "rounded-xl border border-line bg-surface px-4 py-3",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-					className: "flex flex-wrap items-center gap-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "font-extrabold",
-						children: item.meta.title
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: `rounded-full px-2 py-1 text-xs font-bold ${item.depth === "full" ? "bg-accent-soft text-accent" : "bg-soft text-primary"}`,
-						children: item.depth === "full" ? "полная модель" : "каталог"
-					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "block font-extrabold",
+					children: item.meta.title
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 					className: "mt-1 block text-sm text-muted",
-					children: [
-						CATEGORIES.find((category) => category.id === item.category)?.title,
-						". Модулей в предложении: ",
-						item.suggestedWorkIds.length + item.suggestedGearIds.length,
-						". Версия ",
-						item.meta.version,
-						"."
-					]
+					children: CATEGORIES.find((entry) => entry.id === item.category)?.title
 				})]
 			}, item.meta.id))
 		})

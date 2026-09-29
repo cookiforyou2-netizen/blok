@@ -2,8 +2,8 @@ import { i as __toESM } from "../_runtime.mjs";
 import { S as useNavigate, X as require_react, w as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Choice, f as professionTitle, g as useApp, n as AppShell, u as buildCatalog } from "./shell-DGAyvdZq.mjs";
 import { n as GEAR_KIND, t as CATEGORIES } from "./types--OpmHAgC.mjs";
-import { r as Route$1 } from "./router-CtCeWBuz.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/wizard-BQVn1itW.js
+import { r as Route$1 } from "./router-CcjaMekW.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/wizard-CStuh4bR.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var STEPS = [
@@ -133,7 +133,7 @@ function WizardPage() {
 						children: filteredProfessions.slice(0, 30).map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Choice, {
 							checked: draft.professionId === item.meta.id,
 							title: item.meta.title,
-							text: `${CATEGORIES.find((category) => category.id === item.category)?.title} · ${item.depth === "full" ? "полная модель" : "каталог"} · ${item.summary}`,
+							text: `${CATEGORIES.find((category) => category.id === item.category)?.title ?? ""}${item.summary ? ` · ${item.summary}` : ""}`,
 							onToggle: () => selectProfession(item.meta.id)
 						}, item.meta.id))
 					}),
@@ -348,7 +348,7 @@ function WizardPage() {
 						children: "Проверка и сборка"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "mt-2 text-sm leading-relaxed text-muted",
-						children: "Перед выдачей сработает Quality Gate: пять разделов, опасности, риски, учёт только выбранного оборудования, отсутствие выдуманных пунктов нормативных актов и связь «опасность → мера». Если проверка не пройдена, документ останется проектом и не будет помечен как готовый."
+						children: "Перед выдачей проверяется, что инструкция полная: пять разделов, опасности, меры и только выбранное оборудование. Нормы, которые не проверены, в текст не добавляются. Если проверка не пройдена, инструкция останется проектом."
 					})]
 				})
 			]
@@ -396,7 +396,7 @@ function ModulePick({ note, items, selected, onToggle, showAll, setShowAll }) {
 			type: "button",
 			className: "text-sm font-bold text-primary",
 			onClick: () => setShowAll(!showAll),
-			children: showAll ? "Скрыть остальную библиотеку" : "Показать всю библиотеку модулей"
+			children: showAll ? "Скрыть остальной список" : "Показать весь список"
 		})
 	] });
 }

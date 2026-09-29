@@ -19,6 +19,27 @@ export interface GeneratedDocument {
   title: string;
   filename: string;
   blocks: GeneratedBlock[];
+  inclusionReason?: string;
+  formedAt?: string;
+  normativeStatus?: "needs_review";
+}
+
+export interface InstructionRef {
+  id: string;
+  professionId: string | null;
+  professionTitle: string;
+  number: string;
+  date: string;
+  plain?: string;
+}
+
+/** Данные для текста. Применимость сюда не передаётся: её уже решил пакет. */
+export interface GenerateContext {
+  instructions: InstructionRef[];
+  professionTitle: (id: string) => string;
+  gearTitle: (id: string) => string;
+  reason: string;
+  formedAt: string;
 }
 
 export function formatRequirement(requirement: DataRequirement, value: string): string {
@@ -49,5 +70,10 @@ export function fillTemplate(template: DocTemplate, values: Record<string, strin
     title: fill(template.title, values),
     filename: template.filename,
     blocks: template.blocks.map((block) => ({ ...block, text: fill(block.text, values) })),
+    normativeStatus: "needs_review",
   };
+}
+
+export function block(kind: GeneratedBlock["kind"], text: string, bold = false): GeneratedBlock {
+  return { kind, text, bold };
 }

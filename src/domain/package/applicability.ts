@@ -33,9 +33,13 @@ const FIELD_LABEL: Record<FactField, string> = {
   inn: "ИНН",
   headcount: "численность",
   director: "руководитель",
+  director_title: "должность руководителя",
   address: "адрес",
   responsible: "ответственный",
+  responsible_title: "должность ответственного",
   approval_date: "дата",
+  short_name: "краткое название",
+  city: "город",
 };
 
 interface AtomResult {
