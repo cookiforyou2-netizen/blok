@@ -44,6 +44,7 @@ const WAREHOUSE: Applicability = {
     { field: "flag", in: ["warehouse"] },
   ],
 };
+/** powerTools — факт поля flag, тот же resolver, что у equipment. Отдельного списка признаков нет. */
 const TOOLS: Applicability = {
   any: [
     { field: "equipment", in: ["angle_grinder", "drill"] },

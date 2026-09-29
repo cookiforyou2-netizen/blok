@@ -1,5 +1,5 @@
 import type { FactField, FactInput, FactSource, FactValue, FlagKey, OrganizationProfile, ProfileFact, Tri } from "./types";
-import { FLAG_KEYS } from "./types";
+import { FLAG_KEYS, PROFILE_SCHEMA_VERSION } from "./types";
 
 const MATERIAL_GEAR = new Set(["cleaning_agents"]);
 const FOOD_PROFESSIONS = new Set(["cook", "confectioner", "baker", "food_line", "butcher", "dishwasher"]);
@@ -35,6 +35,7 @@ export function emptyFlags(): Record<FlagKey, Tri> {
 
 export function emptyProfile(): OrganizationProfile {
   return {
+    schemaVersion: PROFILE_SCHEMA_VERSION,
     name: "",
     inn: "",
     activity: "",
@@ -63,6 +64,7 @@ export function emptyProfile(): OrganizationProfile {
  * 3 — инструкция, импорт и системный вывод из них;
  * 4 — отраслевой пресет.
  * Пресет никогда не побеждает более высокий источник.
+ * При равном ранге побеждает более позднее наблюдение: последнее явное решение пользователя.
  */
 export function sourceRank(source: FactSource): number {
   if (source.source === "user" && (source.status === "confirmed" || source.status === "rejected")) return 400;
@@ -112,6 +114,10 @@ function cloneFact(fact: ProfileFact): ProfileFact {
   return { ...fact, sources: fact.sources.map((source) => ({ ...source })) };
 }
 
+function sameDecision(source: FactSource, input: FactInput): boolean {
+  return source.source === input.source && source.sourceId === input.sourceId && source.status === input.status && source.value === input.value;
+}
+
 export function mergeFactList(profile: OrganizationProfile, inputs: FactInput[], now = clock()): OrganizationProfile {
   const facts = profile.facts.map(cloneFact);
   for (const input of inputs) {
@@ -121,11 +127,14 @@ export function mergeFactList(profile: OrganizationProfile, inputs: FactInput[],
       fact = { id, field: input.field, key: input.key, sources: [] };
       facts.push(fact);
     }
-    const existing = fact.sources.find((source) => source.source === input.source && source.sourceId === input.sourceId);
+    const existing = fact.sources.find((source) => sameDecision(source, input));
     if (existing) {
-      existing.value = input.value;
-      existing.status = input.status;
       existing.updatedAt = now;
+      const index = fact.sources.indexOf(existing);
+      if (index >= 0 && index < fact.sources.length - 1) {
+        fact.sources.splice(index, 1);
+        fact.sources.push(existing);
+      }
     } else {
       fact.sources.push({
         source: input.source,
@@ -260,10 +269,11 @@ export function projectProfile(profile: OrganizationProfile): OrganizationProfil
       return source;
     }),
   }));
-  const next: OrganizationProfile = { ...merged, facts };
+  const next: OrganizationProfile = { ...merged, facts, schemaVersion: profile.schemaVersion || PROFILE_SCHEMA_VERSION };
   const gearIds = readIds(next, "equipment");
   return {
     ...next,
+    schemaVersion: next.schemaVersion || PROFILE_SCHEMA_VERSION,
     name: readString(next, "name"),
     inn: readString(next, "inn"),
     activity: readString(next, "activity"),

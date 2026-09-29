@@ -1,8 +1,8 @@
 import { w as require_jsx_runtime, x as Link } from "../_libs/@tanstack/react-router+[...].mjs";
-import { l as SECTION_LABEL, m as useApp, n as AppShell, t as APPROVAL_LINES } from "./shell-D6xK9ynY.mjs";
+import { g as useApp, l as SECTION_LABEL, n as AppShell, t as APPROVAL_LINES } from "./shell-DGAyvdZq.mjs";
 import { n as toast } from "../_libs/sonner.mjs";
-import { n as Route } from "./router-CK9Oav6R.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/instruction._id-Co-E_iCF.js
+import { n as Route } from "./router-CtCeWBuz.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/instruction._id-C8D3XuM7.js
 var import_jsx_runtime = require_jsx_runtime();
 var TRANSLIT = {
 	а: "a",

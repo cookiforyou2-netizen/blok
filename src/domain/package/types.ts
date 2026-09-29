@@ -81,23 +81,37 @@ export type FactSourceKind = "instruction" | "user" | "preset" | "system" | "imp
 /** inferred — ещё не подтверждён; confirmed — принят; rejected — явно отвергнут. */
 export type FactStatus = "inferred" | "confirmed" | "rejected";
 
-export type FactField =
-  | "profession"
-  | "custom_profession"
-  | "work"
-  | "equipment"
-  | "condition"
-  | "hazard"
-  | "material"
-  | "ppe"
-  | "position"
-  | "department"
-  | "flag"
-  | "industry"
-  | "activity"
-  | "name"
-  | "inn"
-  | "headcount";
+/**
+ * Единый перечень полей Profile Fact.
+ * Признак `flag` (в том числе powerTools) — такое же поле, как profession или equipment.
+ * Отдельного механизма признаков нет: applicability читает только эти поля через facts/resolver.
+ */
+export const FACT_FIELDS = [
+  "profession",
+  "custom_profession",
+  "work",
+  "equipment",
+  "condition",
+  "hazard",
+  "material",
+  "ppe",
+  "position",
+  "department",
+  "flag",
+  "industry",
+  "activity",
+  "name",
+  "inn",
+  "headcount",
+  "director",
+  "address",
+  "responsible",
+  "approval_date",
+] as const;
+
+export type FactField = (typeof FACT_FIELDS)[number];
+
+export const PROFILE_SCHEMA_VERSION = 1;
 
 export type FactValue = boolean | string | number;
 
@@ -134,6 +148,7 @@ export interface FactInput {
 
 /** Профиль для мастера: списки — проекция фактов, чтобы текущий экран не переписывать. */
 export interface OrganizationProfile {
+  schemaVersion: number;
   name: string;
   inn: string;
   activity: string;
@@ -159,6 +174,7 @@ export interface OrganizationProfile {
  * Условие применимости. Список `in` — ИЛИ.
  * Несколько атомов внутри all — И, внутри any — ИЛИ, внутри none — ни одно не должно выполняться.
  * Группы all, any и none между собой складываются через И.
+ * `field` — только FactField, включая flag.
  */
 export interface ApplicabilityAtom {
   field: FactField;
@@ -175,6 +191,14 @@ export interface Applicability {
   none?: ApplicabilityAtom[];
 }
 
+/** Какое поле нужно, чтобы сформировать документ. Уже известный факт повторно не спрашивается. */
+export interface DataRequirement {
+  id: string;
+  label: string;
+  field: FactField;
+  key: string;
+}
+
 export interface DocumentModule {
   id: string;
   code: string;
@@ -186,11 +210,16 @@ export interface DocumentModule {
   applicability: Applicability;
   dependencies: string[];
   normativeBasis: string;
+  /** Устаревшее имя templateId. Новые документы заполняют оба одинаково. */
   template: string | null;
+  templateId?: string | null;
+  /** Устаревшее имя generatorId для уже существующих инструкций. */
   generator: "instruction" | "none";
+  generatorId?: string | null;
+  requiredData?: DataRequirement[];
   commercialLevel: CommercialLevel;
   optional: boolean;
-  /** Какой отраслевой пакет зарегистрировал документ. Ядро — «core». */
+  /** Какой отраслевой пакет зарегистрировал документ. Ядро каталога — «core». */
   moduleId: string;
   /** Ссылка на профессию каталога, если документ — бесплатная инструкция. */
   professionId?: string;
@@ -224,11 +253,33 @@ export type Match = "yes" | "no" | "unknown";
 
 export type DocResultStatus = "ready" | "clarify" | "optional" | "locked";
 
+/** Состояние документа первого коммерческого модуля на экране пакета. */
+export type WorkflowStatus = "defined" | "clarify" | "needs_data" | "ready_to_generate" | "formed";
+
+export type TraceResult = "YES" | "NO" | "UNKNOWN";
+
+export interface MatchedRule {
+  group: "all" | "any" | "none";
+  field: FactField;
+  op: "in" | "eq" | "min" | "present";
+  keys: string[];
+}
+
+/** Почему документ включён, отклонён или ещё не определён. */
+export interface DecisionTrace {
+  result: TraceResult;
+  matchedRules: MatchedRule[];
+  facts: string[];
+  sources: string[];
+  missing: string[];
+}
+
 export interface ApplicabilityDecision {
   applicable: Match;
   reasons: string[];
   sources: string[];
   missing: string[];
+  trace: DecisionTrace;
 }
 
 export interface PackageItem {
@@ -239,6 +290,7 @@ export interface PackageItem {
   reasons: string[];
   sources: string[];
   missing: string[];
+  trace: DecisionTrace;
 }
 
 export interface PackageComposition {
@@ -257,4 +309,18 @@ export interface PackageComposition {
     medical: number;
     total: number;
   };
+}
+
+/** Состав, зафиксированный в момент начала формирования. Это не архив. */
+export interface PackageSnapshot {
+  createdAt: string;
+  profileVersion: number;
+  documents: Array<{
+    id: string;
+    code: string;
+    name: string;
+    moduleId: string;
+    match: Match;
+    result: TraceResult;
+  }>;
 }

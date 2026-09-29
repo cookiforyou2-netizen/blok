@@ -2,13 +2,25 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell, Choice } from "@/components/shell";
 import { buildCatalog } from "@/domain/engine";
+import { downloadGeneratedDocx } from "@/domain/package/generate/docx";
+import { generateById } from "@/domain/package/generate/registry";
+import type { GeneratedDocument } from "@/domain/package/generate/template";
 import { buildPackage } from "@/domain/package/registry";
 import { PRESETS } from "@/domain/package/presets";
-import { CATEGORY_LABELS, CATEGORY_ORDER, FLAG_KEYS, FLAG_LABELS, type DocResultStatus } from "@/domain/package/types";
+import { CATEGORY_LABELS, CATEGORY_ORDER, FLAG_KEYS, FLAG_LABELS, type DataRequirement, type DocResultStatus, type PackageItem, type WorkflowStatus } from "@/domain/package/types";
+import { createPackageSnapshot, generatorIdOf, missingForItems, workflowOf } from "@/domain/package/workflow";
 import { GEAR_KIND } from "@/domain/types";
 import { useApp } from "@/domain/store";
 
 const STEPS = ["Организация", "Сотрудники и профессии", "Работы и оборудование", "Опасности и условия", "Проверка данных", "Состав пакета"];
+
+const WORKFLOW_LABEL: Record<WorkflowStatus, string> = {
+  defined: "Определён",
+  clarify: "Нужно уточнить",
+  needs_data: "Нужны данные",
+  ready_to_generate: "Готов к формированию",
+  formed: "Сформирован",
+};
 
 const STATUS_LABEL: Record<DocResultStatus, string> = {
   ready: "данные определены",
@@ -33,11 +45,20 @@ function PackagePage() {
   const applyIndustryPreset = useApp((state) => state.applyIndustryPreset);
   const addProfileCustomProfession = useApp((state) => state.addProfileCustomProfession);
   const removeProfileCustomProfession = useApp((state) => state.removeProfileCustomProfession);
+  const setProfileValues = useApp((state) => state.setProfileValues);
+  const packageSnapshot = useApp((state) => state.packageSnapshot);
+  const formedDocuments = useApp((state) => state.formedDocuments);
+  const rememberSnapshot = useApp((state) => state.rememberSnapshot);
+  const rememberFormed = useApp((state) => state.rememberFormed);
   const catalog = useMemo(() => buildCatalog(overrides), [overrides]);
   const pack = useMemo(() => buildPackage(profile), [profile]);
   const [query, setQuery] = useState("");
   const [customName, setCustomName] = useState("");
   const [department, setDepartment] = useState("");
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const formedIds = Object.keys(formedDocuments);
+  const coreItems = pack.items.filter((item) => item.document.moduleId === "core_osh");
+  const missing = missingForItems(profile, coreItems);
 
   const titleOf = (kind: "profession" | "work" | "gear" | "condition", id: string) => {
     if (kind === "profession") return catalog.professions.find((item) => item.meta.id === id)?.meta.title ?? id;
@@ -234,6 +255,7 @@ function PackagePage() {
           <Fact title="Организация" text={profile.name || "не указана"} />
           <Fact title="Отрасль и деятельность" text={[profile.industry, profile.activity].filter(Boolean).join(" · ") || "не указаны"} />
           <Fact title="Численность" text={profile.headcount == null ? "не указана" : String(profile.headcount)} />
+          <Fact title="Версия профиля" text={String(profile.schemaVersion)} />
           <Fact title="Профессии" text={[...profile.professionIds.map((id) => titleOf("profession", id)), ...profile.customProfessions].join(", ") || "не выбраны"} />
           <Fact title="Работы" text={profile.workIds.map((id) => titleOf("work", id)).join(", ") || "не выбраны"} />
           <Fact title="Оборудование и инструмент" text={profile.gearIds.map((id) => titleOf("gear", id)).join(", ") || "не выбраны"} />
@@ -270,8 +292,56 @@ function PackagePage() {
               </button>
             </p>
           )}
+
+          <div className="mt-6 rounded-2xl border border-line bg-surface p-4">
+            <h3 className="text-base font-extrabold">Базовая организация охраны труда</h3>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              Первый модуль пакета. Оплата не подключена: отметка «Полный пакет» показывает коммерческий уровень. Бесплатные инструкции по-прежнему собираются в конструкторе.
+            </p>
+            {packageSnapshot && (
+              <p className="mt-3 rounded-xl bg-soft px-3 py-2 text-sm leading-relaxed">
+                Состав на момент формирования: {new Date(packageSnapshot.createdAt).toLocaleString("ru-RU")}, профиль v{packageSnapshot.profileVersion}, документов в снимке: {packageSnapshot.documents.length}.
+              </p>
+            )}
+            {missing.length > 0 && (
+              <MissingForm
+                requirements={missing}
+                onSave={(values) =>
+                  setProfileValues(
+                    missing.map((requirement) => ({
+                      field: requirement.field,
+                      key: requirement.key,
+                      value: values[requirement.id] ?? "",
+                    })),
+                  )
+                }
+              />
+            )}
+            <div className="mt-3 grid gap-2">
+              {coreItems.map((item) => (
+                <CoreCard
+                  key={item.document.code}
+                  item={item}
+                  workflow={workflowOf(item, profile, formedIds)}
+                  formed={formedDocuments[item.document.id]?.document}
+                  previewOpen={previewId === item.document.id}
+                  onGenerate={() => {
+                    const generatorId = generatorIdOf(item.document);
+                    if (!generatorId) return;
+                    if (!packageSnapshot) rememberSnapshot(createPackageSnapshot(profile, pack));
+                    const generated = generateById(generatorId, profile, item.document);
+                    rememberFormed(item.document.id, generated);
+                    setPreviewId(item.document.id);
+                  }}
+                  onTogglePreview={() => setPreviewId((current) => (current === item.document.id ? null : item.document.id))}
+                  onDownload={(document) => void downloadGeneratedDocx(document)}
+                />
+              ))}
+            </div>
+          </div>
+
           {CATEGORY_ORDER.map((category) => {
-            const rows = pack.items.filter((item) => item.document.category === category);
+            const rows = pack.items.filter((item) => item.document.category === category && item.document.moduleId !== "core_osh");
             if (rows.length === 0) return null;
             return (
               <div key={category} className="mt-6">
@@ -309,7 +379,7 @@ function PackagePage() {
             );
           })}
           <p className="mt-6 text-sm leading-relaxed text-muted">
-            Документы полного пакета, рисков, СИЗ, обучения и медосмотров сейчас не генерируются. Оплата не требуется. Инструкции по охране труда по-прежнему собираются бесплатно.
+            Остальные документы полного пакета пока не формируются в файл. Оплата не требуется. Инструкции по охране труда по-прежнему собираются бесплатно и без ограничений.
           </p>
         </section>
       )}
@@ -327,6 +397,112 @@ function PackagePage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function MissingForm({ requirements, onSave }: { requirements: DataRequirement[]; onSave: (values: Record<string, string>) => void }) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const complete = requirements.every((requirement) => (values[requirement.id] ?? "").trim().length > 0);
+  return (
+    <form
+      className="mt-3 rounded-xl bg-soft px-3 py-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (complete) onSave(values);
+      }}
+    >
+      <p className="text-sm font-bold">Нужны дополнительные данные</p>
+      <p className="mt-1 text-sm text-muted">Известные поля из профиля и инструкций уже подставлены. Заполните только то, чего нет.</p>
+      {requirements.map((requirement) => (
+        <label key={requirement.id} className="mt-3 block text-sm font-bold">
+          {requirement.label}
+          <input
+            required
+            type={requirement.field === "approval_date" ? "date" : "text"}
+            className="mt-1 w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium"
+            value={values[requirement.id] ?? ""}
+            onChange={(event) => setValues((current) => ({ ...current, [requirement.id]: event.target.value }))}
+          />
+        </label>
+      ))}
+      <button type="submit" disabled={!complete} className="mt-3 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-ink disabled:opacity-50">
+        Сохранить данные
+      </button>
+    </form>
+  );
+}
+
+function CoreCard({
+  item,
+  workflow,
+  formed,
+  previewOpen,
+  onGenerate,
+  onTogglePreview,
+  onDownload,
+}: {
+  item: PackageItem;
+  workflow: WorkflowStatus | null;
+  formed?: GeneratedDocument;
+  previewOpen: boolean;
+  onGenerate: () => void;
+  onTogglePreview: () => void;
+  onDownload: (document: GeneratedDocument) => void;
+}) {
+  const tone =
+    workflow === "formed" || workflow === "ready_to_generate" || workflow === "defined"
+      ? "text-accent"
+      : workflow === "clarify" || workflow === "needs_data"
+        ? "text-danger"
+        : "text-muted";
+  return (
+    <article className="rounded-xl border border-line px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <h4 className="text-sm font-bold">{item.document.name}</h4>
+        <span className={`text-sm font-semibold ${tone}`}>{workflow ? WORKFLOW_LABEL[workflow] : STATUS_LABEL[item.status]}</span>
+      </div>
+      <p className="mt-1 text-sm text-muted">🔒 Полный пакет</p>
+      <p className="mt-1 text-sm text-muted">{item.reason}</p>
+      <details className="mt-2 text-sm text-muted">
+        <summary className="cursor-pointer font-semibold text-ink">Почему документ включён</summary>
+        <p className="mt-1">Результат: {item.trace.result}.</p>
+        {item.trace.facts.length > 0 && <p className="mt-1">Факты: {item.trace.facts.join(", ")}.</p>}
+        {item.trace.sources.length > 0 && <p className="mt-1">Источники: {item.trace.sources.join(", ")}.</p>}
+        {item.trace.missing.length > 0 && <p className="mt-1">Не хватает: {item.trace.missing.join(", ")}.</p>}
+        {item.trace.matchedRules.length > 0 && (
+          <p className="mt-1">
+            Правила: {item.trace.matchedRules.map((rule) => `${rule.group} ${rule.field}${rule.keys.length ? ` (${rule.keys.join(", ")})` : ""}`).join("; ")}.
+          </p>
+        )}
+      </details>
+      {workflow === "ready_to_generate" && (
+        <button type="button" className="mt-3 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-ink" onClick={onGenerate}>
+          Сформировать
+        </button>
+      )}
+      {workflow === "formed" && formed && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" className="rounded-full bg-soft px-4 py-2 text-sm font-bold" onClick={onTogglePreview}>
+            {previewOpen ? "Скрыть предпросмотр" : "Предпросмотр"}
+          </button>
+          <button type="button" className="rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-ink" onClick={() => onDownload(formed)}>
+            Скачать DOCX
+          </button>
+          <button type="button" className="rounded-full border border-line px-4 py-2 text-sm font-bold" onClick={onGenerate}>
+            Сформировать заново
+          </button>
+        </div>
+      )}
+      {previewOpen && formed && (
+        <div className="print-sheet mt-3 rounded-xl border border-line bg-white px-4 py-4 text-sm leading-relaxed text-ink" style={{ fontFamily: "var(--font-doc)" }}>
+          {formed.blocks.map((block, index) => (
+            <p key={index} className={block.kind === "heading" ? "text-center text-base font-bold" : block.kind === "right" ? "text-right" : "mt-2 text-left"}>
+              {block.text}
+            </p>
+          ))}
+        </div>
+      )}
+    </article>
   );
 }
 

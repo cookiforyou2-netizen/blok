@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { applyUpdateStep, buildCatalog, blankCustom, blankHazard, blankSout, createInstruction, deriveHazardIds, derivePpeIds, emptyDraft, emptyOverrides, ppeKey, selectionKey, type Overrides, type UpdateStepResult } from "./engine";
-import { absorbAll, absorbInstruction, addCustomProfession, applyPreset, emptyProfile, normalizeProfile, patchOrganization, removeCustomProfession, setFlagFact, toggleListedFact } from "./package/profile";
+import { absorbAll, absorbInstruction, addCustomProfession, applyPreset, emptyProfile, normalizeProfile, patchOrganization, removeCustomProfession, setFlagFact, setTextFact, toggleListedFact } from "./package/profile";
 import { presetById } from "./package/presets";
 import { profileRepository } from "./package/storage";
-import type { FlagKey, OrganizationProfile } from "./package/types";
+import type { GeneratedDocument } from "./package/generate/template";
+import type { FactField, FlagKey, OrganizationProfile, PackageSnapshot } from "./package/types";
 import type { Draft, InstructionRecord, Profession, SoutRow } from "./types";
 
 type ProfileList = "professionIds" | "workIds" | "gearIds" | "conditionIds" | "hazardIds" | "ppeIds";
@@ -16,6 +17,8 @@ interface AppState {
   overrides: Overrides;
   profile: OrganizationProfile;
   packageStep: number;
+  packageSnapshot: PackageSnapshot | null;
+  formedDocuments: Record<string, { formedAt: string; document: GeneratedDocument }>;
   setStep: (step: number) => void;
   patchDraft: (patch: Partial<Draft>) => void;
   selectProfession: (id: string | null) => void;
@@ -44,6 +47,9 @@ interface AppState {
   addProfileCustomProfession: (title: string) => void;
   removeProfileCustomProfession: (title: string) => void;
   syncProfile: () => void;
+  setProfileValues: (entries: Array<{ field: FactField; key: string; value: string }>) => void;
+  rememberSnapshot: (snapshot: PackageSnapshot) => void;
+  rememberFormed: (id: string, document: GeneratedDocument) => void;
 }
 
 export const useApp = create<AppState>()(
@@ -55,6 +61,8 @@ export const useApp = create<AppState>()(
       overrides: emptyOverrides(),
       profile: emptyProfile(),
       packageStep: 0,
+      packageSnapshot: null,
+      formedDocuments: {},
       setStep: (step) => set({ step }),
       patchDraft: (patch) => set({ draft: { ...get().draft, ...patch } }),
       selectProfession: (id) => {
@@ -243,6 +251,20 @@ export const useApp = create<AppState>()(
         profileRepository.saveProfile(profile);
         set({ profile });
       },
+      setProfileValues: (entries) => {
+        let profile = get().profile;
+        for (const entry of entries) profile = setTextFact(profile, entry.field, entry.key, entry.value);
+        profileRepository.saveProfile(profile);
+        set({ profile });
+      },
+      rememberSnapshot: (packageSnapshot) => set({ packageSnapshot }),
+      rememberFormed: (id, document) =>
+        set({
+          formedDocuments: {
+            ...get().formedDocuments,
+            [id]: { formedAt: new Date().toISOString(), document },
+          },
+        }),
     }),
     {
       name: "ychy-iot-v1",
@@ -263,6 +285,8 @@ export const useApp = create<AppState>()(
           },
           profile: normalizeProfile(saved.profile),
           packageStep: typeof saved.packageStep === "number" ? saved.packageStep : 0,
+          packageSnapshot: saved.packageSnapshot ?? null,
+          formedDocuments: saved.formedDocuments ?? {},
         };
       },
     },

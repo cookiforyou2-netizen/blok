@@ -1,6 +1,6 @@
 import { w as require_jsx_runtime, x as Link } from "../_libs/@tanstack/react-router+[...].mjs";
-import { m as useApp, n as AppShell, p as professionsUsingModule, u as buildCatalog } from "./shell-D6xK9ynY.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DMrtpz81.js
+import { g as useApp, m as professionsUsingModule, n as AppShell, u as buildCatalog } from "./shell-DGAyvdZq.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-4G9GxDrx.js
 var import_jsx_runtime = require_jsx_runtime();
 function Home() {
 	const instructions = useApp((state) => state.instructions);

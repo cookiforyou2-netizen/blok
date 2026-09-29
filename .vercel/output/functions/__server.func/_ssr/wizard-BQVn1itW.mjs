@@ -1,9 +1,9 @@
 import { i as __toESM } from "../_runtime.mjs";
 import { S as useNavigate, X as require_react, w as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
-import { a as Choice, d as professionTitle, m as useApp, n as AppShell, u as buildCatalog } from "./shell-D6xK9ynY.mjs";
+import { a as Choice, f as professionTitle, g as useApp, n as AppShell, u as buildCatalog } from "./shell-DGAyvdZq.mjs";
 import { n as GEAR_KIND, t as CATEGORIES } from "./types--OpmHAgC.mjs";
-import { r as Route$1 } from "./router-CK9Oav6R.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/wizard-B9nIeQdu.js
+import { r as Route$1 } from "./router-CtCeWBuz.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/wizard-BQVn1itW.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var STEPS = [

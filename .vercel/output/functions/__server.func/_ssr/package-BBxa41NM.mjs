@@ -1,0 +1,1930 @@
+import { i as __toESM } from "../_runtime.mjs";
+import { X as require_react, w as require_jsx_runtime, x as Link } from "../_libs/@tanstack/react-router+[...].mjs";
+import { _ as verdictOf, a as Choice, c as PRESETS, d as findFact, g as useApp, h as resolvedValue, i as CATEGORY_ORDER, n as AppShell, o as FLAG_KEYS, p as professions, r as CATEGORY_LABELS, s as FLAG_LABELS, u as buildCatalog, v as winningSource } from "./shell-DGAyvdZq.mjs";
+import { n as GEAR_KIND } from "./types--OpmHAgC.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/package-BBxa41NM.js
+var import_react = /* @__PURE__ */ __toESM(require_react());
+var import_jsx_runtime = require_jsx_runtime();
+function saveBlob(blob, filename) {
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = filename;
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+async function downloadGeneratedDocx(doc) {
+	const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import("../_libs/docx.mjs").then((n) => n.t);
+	const font = "Times New Roman";
+	const file = new Document({ sections: [{ children: doc.blocks.map((block) => new Paragraph({
+		heading: block.kind === "heading" ? HeadingLevel.HEADING_1 : void 0,
+		alignment: block.kind === "right" ? AlignmentType.RIGHT : block.kind === "heading" ? AlignmentType.CENTER : AlignmentType.LEFT,
+		spacing: { after: block.kind === "heading" ? 200 : 120 },
+		children: [new TextRun({
+			text: block.text,
+			font,
+			bold: block.bold || block.kind === "heading",
+			size: block.kind === "heading" ? 28 : 22
+		})]
+	})) }] });
+	saveBlob(await Packer.toBlob(file), `${doc.filename}.docx`);
+}
+var orderResponsibleTemplate = {
+	id: "tpl_osh_order_responsible",
+	title: "Приказ о возложении обязанностей по охране труда",
+	filename: "prikaz-obyazannosti-ot",
+	blocks: [
+		{
+			kind: "right",
+			text: "{{organization.name}}",
+			bold: true
+		},
+		{
+			kind: "right",
+			text: "{{organization.address}}"
+		},
+		{
+			kind: "right",
+			text: "ПРИКАЗ",
+			bold: true
+		},
+		{
+			kind: "right",
+			text: "{{approvalDate}}"
+		},
+		{
+			kind: "heading",
+			text: "О возложении обязанностей по охране труда",
+			bold: true
+		},
+		{
+			kind: "body",
+			text: "В целях организации работы по охране труда в {{organization.name}}"
+		},
+		{
+			kind: "body",
+			text: "ПРИКАЗЫВАЮ:",
+			bold: true
+		},
+		{
+			kind: "body",
+			text: "1. Возложить обязанности по охране труда на {{responsiblePerson}}"
+		},
+		{
+			kind: "body",
+			text: "2. {{responsiblePerson}} обеспечить учёт инструкций по охране труда, проведение инструктажей и доведение требований охраны труда до работников."
+		},
+		{
+			kind: "body",
+			text: "3. Контроль исполнения настоящего приказа оставляю за собой."
+		},
+		{
+			kind: "body",
+			text: "Руководитель {{organization.director}}"
+		},
+		{
+			kind: "body",
+			text: "Проект документа собран по профилю организации. Нормативное основание и формулировки требуют проверки специалистом по охране труда."
+		}
+	]
+};
+function requirementValue(profile, requirement) {
+	const value = resolvedValue(profile, requirement.field, requirement.key);
+	if (typeof value !== "string") return "";
+	return value.trim();
+}
+function missingRequirements(profile, document) {
+	return (document.requiredData ?? []).filter((requirement) => requirementValue(profile, requirement).length === 0);
+}
+/** Поля, которых не хватает применимым документам. Уже известные факты в список не попадают. */
+function missingForItems(profile, items) {
+	const missing = [];
+	const seen = /* @__PURE__ */ new Set();
+	for (const item of items) {
+		if (item.document.moduleId !== "core_osh" || item.match !== "yes") continue;
+		for (const requirement of missingRequirements(profile, item.document)) {
+			if (seen.has(requirement.id)) continue;
+			seen.add(requirement.id);
+			missing.push(requirement);
+		}
+	}
+	return missing;
+}
+function generatorIdOf(document) {
+	const id = document.generatorId;
+	if (!id || id === "none" || id === "instruction") return null;
+	return id;
+}
+function workflowOf(item, profile, formedIds) {
+	if (item.document.moduleId !== "core_osh") return null;
+	if (item.match === "unknown" || item.status === "clarify") return "clarify";
+	if (item.match !== "yes") return null;
+	if (formedIds.includes(item.document.id)) return "formed";
+	if (missingRequirements(profile, item.document).length > 0) return "needs_data";
+	if (generatorIdOf(item.document)) return "ready_to_generate";
+	return "defined";
+}
+function createPackageSnapshot(profile, composition, createdAt = (/* @__PURE__ */ new Date()).toISOString()) {
+	return {
+		createdAt,
+		profileVersion: profile.schemaVersion,
+		documents: composition.items.map((item) => ({
+			id: item.document.id,
+			code: item.document.code,
+			name: item.document.name,
+			moduleId: item.document.moduleId,
+			match: item.match,
+			result: item.trace.result
+		}))
+	};
+}
+function formatRequirement(requirement, value) {
+	if (requirement.field === "approval_date" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+		const [year, month, day] = value.split("-");
+		return `${day}.${month}.${year}`;
+	}
+	return value;
+}
+function requirementValues(profile, requirements) {
+	const values = {};
+	for (const requirement of requirements) {
+		const value = requirementValue(profile, requirement);
+		if (value) values[requirement.id] = formatRequirement(requirement, value);
+	}
+	return values;
+}
+function fill(text, values) {
+	return text.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, key) => values[key] || "не указано");
+}
+/** Шаблон не решает применимость: только подставляет уже собранные значения. */
+function fillTemplate(template, values) {
+	return {
+		templateId: template.id,
+		title: fill(template.title, values),
+		filename: template.filename,
+		blocks: template.blocks.map((block) => ({
+			...block,
+			text: fill(block.text, values)
+		}))
+	};
+}
+var templates = /* @__PURE__ */ new Map();
+var generators = /* @__PURE__ */ new Map();
+function registerTemplate(template) {
+	templates.set(template.id, template);
+}
+function registerGenerator(generator) {
+	generators.set(generator.id, generator);
+}
+function generateById(id, profile, document) {
+	const generator = generators.get(id);
+	if (!generator) throw new Error(`Генератор не зарегистрирован: ${id}`);
+	return generator.generate(profile, document);
+}
+var orderResponsibleGenerator = {
+	id: "osh_order_responsible",
+	templateId: orderResponsibleTemplate.id,
+	generate(profile, document) {
+		return fillTemplate(templates.get(document.templateId || orderResponsibleTemplate.id) ?? orderResponsibleTemplate, requirementValues(profile, document.requiredData ?? []));
+	}
+};
+registerTemplate(orderResponsibleTemplate);
+registerGenerator(orderResponsibleGenerator);
+var FIELD_LABEL = {
+	profession: "профессия",
+	custom_profession: "своя должность",
+	work: "вид работ",
+	equipment: "оборудование",
+	condition: "условие",
+	hazard: "опасность",
+	material: "материал",
+	ppe: "СИЗ",
+	position: "должность",
+	department: "подразделение",
+	flag: "признак",
+	industry: "отрасль",
+	activity: "деятельность",
+	name: "название",
+	inn: "ИНН",
+	headcount: "численность",
+	director: "руководитель",
+	address: "адрес",
+	responsible: "ответственный",
+	approval_date: "дата"
+};
+function prettyKey(field, key) {
+	if (field === "flag") return FLAG_LABELS[key] ?? key;
+	return key;
+}
+function sourceIds(profile, field, key) {
+	const winner = winningSource(findFact(profile, field, key));
+	return winner ? [winner.sourceId] : [];
+}
+function factIdOf(field, key) {
+	return `${field}:${key}`;
+}
+function hit(group, atom, op, keys) {
+	return {
+		group,
+		field: atom.field,
+		op,
+		keys
+	};
+}
+function blank(verdict, extra) {
+	return {
+		verdict,
+		reasons: [],
+		sources: [],
+		missing: [],
+		rules: [],
+		facts: [],
+		...extra
+	};
+}
+function atomResult(profile, atom, group) {
+	if (atom.present) {
+		const facts = profile.facts.filter((fact) => fact.field === atom.field);
+		if (facts.length === 0) return blank("unknown", { missing: [`${atom.field}:*`] });
+		const yes = facts.filter((fact) => verdictOf(fact) === "yes");
+		if (yes.length > 0) {
+			const ids = yes.map((fact) => fact.id);
+			return blank("yes", {
+				reasons: [`${FIELD_LABEL[atom.field]}: ${yes.map((fact) => prettyKey(atom.field, fact.key)).join(", ")}`],
+				sources: yes.flatMap((fact) => sourceIds(profile, atom.field, fact.key)),
+				rules: [hit(group, atom, "present", yes.map((fact) => fact.key))],
+				facts: ids
+			});
+		}
+		const unknown = facts.filter((fact) => verdictOf(fact) === "unknown");
+		if (unknown.length > 0) return blank("unknown", {
+			sources: unknown.flatMap((fact) => sourceIds(profile, atom.field, fact.key)),
+			missing: unknown.map((fact) => fact.id)
+		});
+		return blank("no", {
+			reasons: [`${FIELD_LABEL[atom.field]} отклонены`],
+			rules: [hit(group, atom, "present", [])]
+		});
+	}
+	if (atom.min != null || atom.field === "headcount") {
+		const fact = findFact(profile, "headcount", "value");
+		const verdict = verdictOf(fact);
+		const winner = winningSource(fact);
+		if (verdict !== "yes" || !winner || typeof winner.value !== "number") return blank(verdict === "no" ? "no" : "unknown", { missing: verdict === "no" ? [] : ["headcount:value"] });
+		const enough = atom.min == null || winner.value >= atom.min;
+		const rule = hit(group, {
+			...atom,
+			field: "headcount"
+		}, "min", [String(atom.min ?? winner.value)]);
+		return enough ? blank("yes", {
+			reasons: [`численность: ${winner.value}`],
+			sources: [winner.sourceId],
+			rules: [rule],
+			facts: ["headcount:value"]
+		}) : blank("no", {
+			reasons: [`численность ${winner.value} меньше ${atom.min}`],
+			sources: [winner.sourceId],
+			rules: [rule],
+			facts: ["headcount:value"]
+		});
+	}
+	if (atom.eq !== void 0) {
+		const key = "value";
+		const fact = findFact(profile, atom.field, key);
+		const verdict = verdictOf(fact);
+		const winner = winningSource(fact);
+		if (!winner || verdict === "unknown") return blank("unknown", { missing: [factIdOf(atom.field, key)] });
+		const rule = hit(group, atom, "eq", [String(atom.eq)]);
+		if (winner.value === atom.eq && verdict === "yes") return blank("yes", {
+			reasons: [`${FIELD_LABEL[atom.field]}: ${String(atom.eq)}`],
+			sources: [winner.sourceId],
+			rules: [rule],
+			facts: [factIdOf(atom.field, key)]
+		});
+		return blank("no", {
+			reasons: [`${FIELD_LABEL[atom.field]} не равно ${String(atom.eq)}`],
+			sources: [winner.sourceId],
+			rules: [rule],
+			facts: [factIdOf(atom.field, key)]
+		});
+	}
+	const keys = atom.in ?? [];
+	if (keys.length === 0) return blank("no");
+	const yes = [];
+	const missing = [];
+	const sources = [];
+	const facts = [];
+	let rejected = 0;
+	for (const key of keys) {
+		const fact = findFact(profile, atom.field, key);
+		const verdict = verdictOf(fact);
+		if (verdict === "yes") {
+			yes.push(prettyKey(atom.field, key));
+			sources.push(...sourceIds(profile, atom.field, key));
+			facts.push(factIdOf(atom.field, key));
+		} else if (verdict === "no") rejected += 1;
+		else missing.push(factIdOf(atom.field, key));
+	}
+	if (yes.length > 0) return blank("yes", {
+		reasons: [`${FIELD_LABEL[atom.field]}: ${yes.join(", ")}`],
+		sources,
+		rules: [hit(group, atom, "in", keys.filter((key) => facts.includes(factIdOf(atom.field, key))))],
+		facts
+	});
+	if (missing.length > 0) return blank("unknown", { missing });
+	if (rejected === keys.length) return blank("no", {
+		reasons: [`${FIELD_LABEL[atom.field]}: ${keys.map((key) => prettyKey(atom.field, key)).join(", ")} — нет`],
+		rules: [hit(group, atom, "in", keys)],
+		facts: keys.map((key) => factIdOf(atom.field, key))
+	});
+	return blank("unknown", { missing: keys.map((key) => factIdOf(atom.field, key)) });
+}
+function combineOr(parts) {
+	if (parts.length === 0) return "skip";
+	const yes = parts.filter((part) => part.verdict === "yes");
+	if (yes.length > 0) return blank("yes", {
+		reasons: yes.flatMap((part) => part.reasons),
+		sources: [...new Set(yes.flatMap((part) => part.sources))],
+		rules: yes.flatMap((part) => part.rules),
+		facts: [...new Set(yes.flatMap((part) => part.facts))]
+	});
+	const unknown = parts.filter((part) => part.verdict === "unknown");
+	if (unknown.length > 0) return blank("unknown", {
+		sources: [...new Set(unknown.flatMap((part) => part.sources))],
+		missing: [...new Set(unknown.flatMap((part) => part.missing))]
+	});
+	return blank("no", {
+		reasons: parts.flatMap((part) => part.reasons),
+		rules: parts.flatMap((part) => part.rules),
+		facts: [...new Set(parts.flatMap((part) => part.facts))]
+	});
+}
+function combineAnd(parts) {
+	if (parts.length === 0) return "skip";
+	if (parts.some((part) => part.verdict === "no")) {
+		const blocked = parts.filter((part) => part.verdict === "no");
+		return blank("no", {
+			reasons: blocked.flatMap((part) => part.reasons),
+			rules: blocked.flatMap((part) => part.rules),
+			facts: [...new Set(blocked.flatMap((part) => part.facts))]
+		});
+	}
+	if (parts.some((part) => part.verdict === "unknown")) {
+		const unknown = parts.filter((part) => part.verdict === "unknown");
+		return blank("unknown", {
+			sources: [...new Set(unknown.flatMap((part) => part.sources))],
+			missing: [...new Set(unknown.flatMap((part) => part.missing))]
+		});
+	}
+	return blank("yes", {
+		reasons: parts.flatMap((part) => part.reasons),
+		sources: [...new Set(parts.flatMap((part) => part.sources))],
+		rules: parts.flatMap((part) => part.rules),
+		facts: [...new Set(parts.flatMap((part) => part.facts))]
+	});
+}
+function combineNone(parts) {
+	if (parts.length === 0) return "skip";
+	const held = parts.filter((part) => part.verdict === "yes");
+	if (held.length > 0) return blank("no", {
+		reasons: held.flatMap((part) => part.reasons.map((reason) => `запрещающее условие: ${reason}`)),
+		sources: [...new Set(held.flatMap((part) => part.sources))],
+		rules: held.flatMap((part) => part.rules),
+		facts: [...new Set(held.flatMap((part) => part.facts))]
+	});
+	const unknown = parts.filter((part) => part.verdict === "unknown");
+	if (unknown.length > 0) return blank("unknown", { missing: [...new Set(unknown.flatMap((part) => part.missing))] });
+	return blank("yes");
+}
+function asResult(value) {
+	return value === "skip" ? null : value;
+}
+function traceResult(match) {
+	if (match === "yes") return "YES";
+	if (match === "no") return "NO";
+	return "UNKNOWN";
+}
+function toTrace(result) {
+	return {
+		result: traceResult(result.verdict),
+		matchedRules: result.verdict === "unknown" ? [] : result.rules,
+		facts: result.verdict === "unknown" ? [] : [...new Set(result.facts)],
+		sources: [...new Set(result.sources)],
+		missing: [...new Set(result.missing)]
+	};
+}
+function decisionFrom(result) {
+	return {
+		applicable: result.verdict,
+		reasons: result.reasons,
+		sources: [...new Set(result.sources)],
+		missing: [...new Set(result.missing)],
+		trace: toTrace(result)
+	};
+}
+/** ALL + ANY + NONE. Пустое правило — документ нужен организации в целом. */
+function evaluateApplicability(profile, applicability) {
+	const groups = [
+		asResult(combineAnd((applicability.all ?? []).map((atom) => atomResult(profile, atom, "all")))),
+		asResult(combineOr((applicability.any ?? []).map((atom) => atomResult(profile, atom, "any")))),
+		asResult(combineNone((applicability.none ?? []).map((atom) => atomResult(profile, atom, "none"))))
+	].filter((group) => group != null);
+	if (groups.length === 0) return {
+		applicable: "yes",
+		reasons: ["Требуется для организации в целом"],
+		sources: [],
+		missing: [],
+		trace: {
+			result: "YES",
+			matchedRules: [],
+			facts: [],
+			sources: [],
+			missing: []
+		}
+	};
+	const folded = combineAnd(groups);
+	if (folded === "skip") return {
+		applicable: "yes",
+		reasons: ["Требуется для организации в целом"],
+		sources: [],
+		missing: [],
+		trace: {
+			result: "YES",
+			matchedRules: [],
+			facts: [],
+			sources: [],
+			missing: []
+		}
+	};
+	const decision = decisionFrom(folded);
+	if (decision.applicable === "yes" && decision.reasons.length === 0) decision.reasons = ["Требуется для организации в целом"];
+	return decision;
+}
+function explain(decision) {
+	if (decision.applicable === "yes") return decision.reasons.length > 0 ? `Документ включён, потому что ${decision.reasons.join("; ")}.` : "Документ включён.";
+	if (decision.applicable === "unknown") {
+		const labels = decision.missing.map((id) => {
+			const [field, key] = id.split(":");
+			if (!key || key === "*") return FIELD_LABEL[field] ?? id;
+			return prettyKey(field, key);
+		});
+		return labels.length > 0 ? `Нужно уточнить: ${labels.join(", ")}.` : "Нужно уточнить.";
+	}
+	return decision.reasons.length > 0 ? `Документ не включён: ${decision.reasons.join("; ")}.` : "Документ не включён.";
+}
+function resolveStatus(document, match) {
+	if (match === "no") return "exclude";
+	if (match === "unknown") return "clarify";
+	if (document.optional) return "optional";
+	if (document.commercialLevel === "FREE") return "ready";
+	return "locked";
+}
+function composePackage(profile, documents) {
+	const items = [];
+	for (const document of documents) {
+		if (document.status === "deprecated") continue;
+		const decision = evaluateApplicability(profile, document.applicability);
+		const status = resolveStatus(document, decision.applicable);
+		if (status === "exclude") continue;
+		items.push({
+			document,
+			match: decision.applicable,
+			status,
+			reason: explain(decision),
+			reasons: decision.reasons,
+			sources: decision.sources,
+			missing: decision.missing,
+			trace: decision.trace
+		});
+	}
+	const included = items.filter((item) => item.status === "ready" || item.status === "locked");
+	const clarifications = items.filter((item) => item.status === "clarify");
+	const optional = items.filter((item) => item.status === "optional");
+	const countShape = (shape) => included.filter((item) => item.document.shape === shape).length;
+	return {
+		items,
+		included,
+		clarifications,
+		optional,
+		counts: {
+			orders: countShape("order"),
+			instructions: countShape("instruction"),
+			policies: countShape("policy"),
+			programs: countShape("program"),
+			lists: countShape("list"),
+			journals: countShape("journal"),
+			ppe: included.filter((item) => item.document.category === "ppe" && item.document.shape !== "order").length,
+			medical: included.filter((item) => item.document.category === "medical" && item.document.shape !== "order").length,
+			total: included.length
+		}
+	};
+}
+var CHECK$1 = "Нормативное основание требует проверки";
+var BASIS_IOT = "Структура инструкции соответствует приказу Минтруда России от 29.10.2021 № 772н. Иные нормативные основания требуют проверки.";
+var FOOD = [
+	"cook",
+	"confectioner",
+	"baker",
+	"food_line",
+	"butcher",
+	"dishwasher"
+];
+var HEIGHT = { any: [
+	{
+		field: "condition",
+		in: ["cond_height"]
+	},
+	{
+		field: "equipment",
+		in: ["ladder"]
+	},
+	{
+		field: "hazard",
+		in: ["fall_height"]
+	},
+	{
+		field: "flag",
+		in: ["height"]
+	}
+] };
+var ELECTRICAL = { any: [
+	{
+		field: "work",
+		in: ["work_electrical_install", "work_electrical_maint"]
+	},
+	{
+		field: "condition",
+		in: ["cond_live"]
+	},
+	{
+		field: "equipment",
+		in: ["voltage_indicator", "insulated_tools"]
+	},
+	{
+		field: "flag",
+		in: ["electrical"]
+	}
+] };
+var FOOD_RULE = { any: [
+	{
+		field: "profession",
+		in: FOOD
+	},
+	{
+		field: "work",
+		in: ["work_kitchen"]
+	},
+	{
+		field: "condition",
+		in: ["cond_hot_kitchen"]
+	},
+	{
+		field: "flag",
+		in: ["food"]
+	}
+] };
+var TRANSPORT = { any: [
+	{
+		field: "equipment",
+		in: [
+			"car",
+			"forklift",
+			"self_propelled"
+		]
+	},
+	{
+		field: "work",
+		in: ["work_driving"]
+	},
+	{
+		field: "flag",
+		in: ["transport"]
+	}
+] };
+var WAREHOUSE = { any: [
+	{
+		field: "profession",
+		in: [
+			"loader",
+			"storekeeper",
+			"picker",
+			"receiver",
+			"packer",
+			"stacker_driver",
+			"forklift_driver"
+		]
+	},
+	{
+		field: "work",
+		in: ["work_stacking"]
+	},
+	{
+		field: "flag",
+		in: ["warehouse"]
+	}
+] };
+/** powerTools — факт поля flag, тот же resolver, что у equipment. Отдельного списка признаков нет. */
+var TOOLS = { any: [{
+	field: "equipment",
+	in: ["angle_grinder", "drill"]
+}, {
+	field: "flag",
+	in: ["powerTools"]
+}] };
+var HAZARDOUS = { any: [
+	{
+		field: "condition",
+		in: [
+			"cond_height",
+			"cond_confined",
+			"cond_hot_zone",
+			"cond_explosive"
+		]
+	},
+	{
+		field: "equipment",
+		in: ["gas_cylinder", "ladder"]
+	},
+	{
+		field: "work",
+		in: ["work_gas_cutting", "work_slinging"]
+	},
+	{
+		field: "flag",
+		in: ["hazardousWork"]
+	}
+] };
+var PPE = { any: [{
+	field: "ppe",
+	present: true
+}, {
+	field: "flag",
+	in: ["ppe"]
+}] };
+var MEDICAL = { any: [{
+	field: "flag",
+	in: ["medical"]
+}] };
+var SOUT_DONE = { any: [{
+	field: "flag",
+	in: ["sout"]
+}] };
+var HAS_PROFESSIONS$1 = { any: [{
+	field: "profession",
+	present: true
+}, {
+	field: "custom_profession",
+	present: true
+}] };
+function doc$1(init) {
+	return {
+		id: init.code,
+		version: init.version ?? "1.0.0",
+		status: init.status ?? "active",
+		dependencies: [],
+		template: null,
+		generator: init.generator ?? "none",
+		commercialLevel: init.commercialLevel ?? "PACKAGE",
+		optional: init.optional ?? false,
+		moduleId: init.moduleId ?? "core",
+		normativeBasis: init.normativeBasis ?? CHECK$1,
+		code: init.code,
+		name: init.name,
+		category: init.category,
+		shape: init.shape,
+		applicability: init.applicability,
+		professionId: init.professionId
+	};
+}
+/** Организационные документы — данные, не зашитый отраслевой пакет. */
+function organizationDocuments() {
+	return [
+		doc$1({
+			code: "policy_suot",
+			name: "Положение о системе управления охраной труда",
+			category: "organization",
+			shape: "policy",
+			applicability: {}
+		}),
+		doc$1({
+			code: "policy_instructions",
+			name: "Положение о порядке разработки и учёта инструкций по охране труда",
+			category: "organization",
+			shape: "policy",
+			applicability: {}
+		}),
+		doc$1({
+			code: "order_responsible",
+			name: "Приказ о возложении обязанностей по охране труда",
+			category: "organization",
+			shape: "order",
+			applicability: {}
+		}),
+		doc$1({
+			code: "order_training",
+			name: "Приказ об организации обучения по охране труда",
+			category: "training",
+			shape: "order",
+			applicability: {}
+		}),
+		doc$1({
+			code: "order_sout",
+			name: "Приказ об организации специальной оценки условий труда",
+			category: "organization",
+			shape: "order",
+			applicability: {}
+		}),
+		doc$1({
+			code: "order_instructions",
+			name: "Приказ об утверждении инструкций по охране труда",
+			category: "instructions",
+			shape: "order",
+			applicability: HAS_PROFESSIONS$1
+		}),
+		doc$1({
+			code: "program_intro",
+			name: "Программа вводного инструктажа",
+			category: "training",
+			shape: "program",
+			applicability: {}
+		}),
+		doc$1({
+			code: "program_first_aid",
+			name: "Программа обучения оказанию первой помощи",
+			category: "training",
+			shape: "program",
+			applicability: {}
+		}),
+		doc$1({
+			code: "program_workplace",
+			name: "Программа первичного инструктажа на рабочем месте",
+			category: "training",
+			shape: "program",
+			applicability: HAS_PROFESSIONS$1
+		}),
+		doc$1({
+			code: "journal_intro",
+			name: "Журнал регистрации вводного инструктажа",
+			category: "journals",
+			shape: "journal",
+			applicability: {}
+		}),
+		doc$1({
+			code: "journal_workplace",
+			name: "Журнал регистрации инструктажа на рабочем месте",
+			category: "journals",
+			shape: "journal",
+			applicability: HAS_PROFESSIONS$1
+		}),
+		doc$1({
+			code: "journal_issue",
+			name: "Журнал учёта выдачи инструкций",
+			category: "journals",
+			shape: "journal",
+			applicability: HAS_PROFESSIONS$1
+		}),
+		doc$1({
+			code: "list_instructions",
+			name: "Перечень инструкций по охране труда",
+			category: "lists",
+			shape: "list",
+			applicability: HAS_PROFESSIONS$1
+		}),
+		doc$1({
+			code: "list_positions",
+			name: "Перечень профессий и должностей",
+			category: "lists",
+			shape: "list",
+			applicability: HAS_PROFESSIONS$1
+		}),
+		doc$1({
+			code: "risk_policy",
+			name: "Положение об управлении профессиональными рисками",
+			category: "risk",
+			shape: "policy",
+			applicability: {},
+			commercialLevel: "PRO"
+		}),
+		doc$1({
+			code: "risk_cards",
+			name: "Карты оценки профессиональных рисков",
+			category: "risk",
+			shape: "card",
+			applicability: HAS_PROFESSIONS$1,
+			commercialLevel: "PRO"
+		}),
+		doc$1({
+			code: "order_height",
+			name: "Приказ об организации работ на высоте",
+			category: "hazardous",
+			shape: "order",
+			applicability: HEIGHT
+		}),
+		doc$1({
+			code: "program_height",
+			name: "Программа обучения безопасным методам работ на высоте",
+			category: "training",
+			shape: "program",
+			applicability: HEIGHT,
+			commercialLevel: "PRO"
+		}),
+		doc$1({
+			code: "list_height",
+			name: "Перечень работников, допускаемых к работам на высоте",
+			category: "lists",
+			shape: "list",
+			applicability: HEIGHT
+		}),
+		doc$1({
+			code: "order_electrical",
+			name: "Приказ о назначении ответственного за электрохозяйство",
+			category: "hazardous",
+			shape: "order",
+			applicability: ELECTRICAL
+		}),
+		doc$1({
+			code: "program_electrical",
+			name: "Программа обучения по электробезопасности",
+			category: "training",
+			shape: "program",
+			applicability: ELECTRICAL,
+			commercialLevel: "PRO"
+		}),
+		doc$1({
+			code: "order_food",
+			name: "Приказ об организации работы пищеблока",
+			category: "extra",
+			shape: "order",
+			applicability: FOOD_RULE
+		}),
+		doc$1({
+			code: "order_transport",
+			name: "Приказ об организации эксплуатации транспорта",
+			category: "extra",
+			shape: "order",
+			applicability: TRANSPORT
+		}),
+		doc$1({
+			code: "journal_pretrip",
+			name: "Журнал предрейсового контроля",
+			category: "journals",
+			shape: "journal",
+			applicability: TRANSPORT,
+			commercialLevel: "PRO"
+		}),
+		doc$1({
+			code: "order_warehouse",
+			name: "Приказ об организации складских работ",
+			category: "extra",
+			shape: "order",
+			applicability: WAREHOUSE
+		}),
+		doc$1({
+			code: "order_tools",
+			name: "Приказ о допуске к работе с электроинструментом",
+			category: "hazardous",
+			shape: "order",
+			applicability: TOOLS
+		}),
+		doc$1({
+			code: "order_hazardous",
+			name: "Приказ об организации работ повышенной опасности",
+			category: "hazardous",
+			shape: "order",
+			applicability: HAZARDOUS
+		}),
+		doc$1({
+			code: "list_hazardous",
+			name: "Перечень работ повышенной опасности",
+			category: "lists",
+			shape: "list",
+			applicability: HAZARDOUS
+		}),
+		doc$1({
+			code: "order_ppe",
+			name: "Приказ об обеспечении работников СИЗ",
+			category: "ppe",
+			shape: "order",
+			applicability: PPE
+		}),
+		doc$1({
+			code: "ppe_norms",
+			name: "Нормы выдачи СИЗ",
+			category: "ppe",
+			shape: "card",
+			applicability: PPE,
+			commercialLevel: "PRO"
+		}),
+		doc$1({
+			code: "ppe_cards",
+			name: "Личные карточки учёта выдачи СИЗ",
+			category: "ppe",
+			shape: "card",
+			applicability: PPE
+		}),
+		doc$1({
+			code: "journal_ppe",
+			name: "Журнал учёта выдачи СИЗ",
+			category: "journals",
+			shape: "journal",
+			applicability: PPE
+		}),
+		doc$1({
+			code: "list_ppe",
+			name: "Перечень СИЗ",
+			category: "lists",
+			shape: "list",
+			applicability: PPE
+		}),
+		doc$1({
+			code: "order_medical",
+			name: "Приказ об организации медицинских осмотров",
+			category: "medical",
+			shape: "order",
+			applicability: MEDICAL
+		}),
+		doc$1({
+			code: "list_medical",
+			name: "Список контингента на медицинский осмотр",
+			category: "medical",
+			shape: "list",
+			applicability: MEDICAL,
+			commercialLevel: "PRO"
+		}),
+		doc$1({
+			code: "sout_materials",
+			name: "Материалы специальной оценки условий труда",
+			category: "extra",
+			shape: "card",
+			applicability: SOUT_DONE,
+			commercialLevel: "PRO"
+		}),
+		doc$1({
+			code: "expert_review",
+			name: "Экспертная проверка пакета специалистом",
+			category: "extra",
+			shape: "other",
+			applicability: {},
+			commercialLevel: "EXPERT",
+			optional: true
+		})
+	];
+}
+/** Инструкция не копирует каталог профессий: это ссылка на уже существующий id. */
+function instructionDocuments() {
+	return professions.map((profession) => doc$1({
+		code: `iot_${profession.meta.id}`,
+		name: `Инструкция по охране труда: ${profession.meta.title}`,
+		category: "instructions",
+		shape: "instruction",
+		applicability: { any: [{
+			field: "profession",
+			in: [profession.meta.id]
+		}] },
+		commercialLevel: "FREE",
+		generator: "instruction",
+		normativeBasis: BASIS_IOT,
+		professionId: profession.meta.id
+	}));
+}
+function customInstructionDocument(title) {
+	return doc$1({
+		code: `iot_custom_${Array.from(title.trim().toLowerCase()).map((char) => /[a-z0-9а-яё]/i.test(char) ? char : "-").join("").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 48)}`,
+		name: `Инструкция по охране труда: ${title.trim()}`,
+		category: "instructions",
+		shape: "instruction",
+		applicability: {},
+		commercialLevel: "FREE",
+		generator: "instruction",
+		normativeBasis: BASIS_IOT
+	});
+}
+var CHECK = "Нормативное основание требует проверки";
+var ORG_NAME = {
+	id: "organization.name",
+	label: "Название организации",
+	field: "name",
+	key: "value"
+};
+var DIRECTOR = {
+	id: "organization.director",
+	label: "Руководитель",
+	field: "director",
+	key: "value"
+};
+var ADDRESS = {
+	id: "organization.address",
+	label: "Адрес",
+	field: "address",
+	key: "value"
+};
+var RESPONSIBLE = {
+	id: "responsiblePerson",
+	label: "Ответственный за охрану труда",
+	field: "responsible",
+	key: "value"
+};
+var APPROVAL_DATE = {
+	id: "approvalDate",
+	label: "Дата приказа",
+	field: "approval_date",
+	key: "value"
+};
+var HAS_PROFESSIONS = { any: [{
+	field: "profession",
+	present: true
+}, {
+	field: "custom_profession",
+	present: true
+}] };
+var POWER_TOOLS = { any: [{
+	field: "equipment",
+	in: ["angle_grinder", "drill"]
+}, {
+	field: "flag",
+	in: ["powerTools"]
+}] };
+function doc(init) {
+	return {
+		id: init.code,
+		code: init.code,
+		name: init.name,
+		category: init.category,
+		shape: init.shape,
+		version: "1.0.0",
+		status: "active",
+		applicability: init.applicability,
+		dependencies: [],
+		normativeBasis: CHECK,
+		template: init.templateId ?? null,
+		templateId: init.templateId ?? null,
+		generator: "none",
+		generatorId: init.generatorId ?? null,
+		requiredData: init.requiredData ?? [ORG_NAME],
+		commercialLevel: "PACKAGE",
+		optional: false,
+		moduleId: "core_osh"
+	};
+}
+var coreOshModule = {
+	id: "core_osh",
+	title: "Базовая организация охраны труда",
+	version: "1.0.0",
+	status: "active",
+	documents: [
+		doc({
+			code: "osh_order_responsible",
+			name: "Приказ о возложении обязанностей по охране труда",
+			category: "organization",
+			shape: "order",
+			applicability: {},
+			requiredData: [
+				ORG_NAME,
+				DIRECTOR,
+				ADDRESS,
+				RESPONSIBLE,
+				APPROVAL_DATE
+			],
+			templateId: "tpl_osh_order_responsible",
+			generatorId: "osh_order_responsible"
+		}),
+		doc({
+			code: "osh_policy_suot",
+			name: "Положение о системе управления охраной труда",
+			category: "organization",
+			shape: "policy",
+			applicability: {}
+		}),
+		doc({
+			code: "osh_order_approve",
+			name: "Приказ об утверждении инструкций по охране труда",
+			category: "instructions",
+			shape: "order",
+			applicability: HAS_PROFESSIONS
+		}),
+		doc({
+			code: "osh_list_instructions",
+			name: "Перечень инструкций по охране труда",
+			category: "lists",
+			shape: "list",
+			applicability: HAS_PROFESSIONS
+		}),
+		doc({
+			code: "osh_list_positions",
+			name: "Перечень профессий и должностей",
+			category: "lists",
+			shape: "list",
+			applicability: HAS_PROFESSIONS
+		}),
+		doc({
+			code: "osh_program_intro",
+			name: "Программа вводного инструктажа",
+			category: "training",
+			shape: "program",
+			applicability: {}
+		}),
+		doc({
+			code: "osh_order_training",
+			name: "Приказ об организации обучения по охране труда",
+			category: "training",
+			shape: "order",
+			applicability: {}
+		}),
+		doc({
+			code: "osh_order_power_tools",
+			name: "Приказ о допуске к работе с электроинструментом",
+			category: "hazardous",
+			shape: "order",
+			applicability: POWER_TOOLS
+		})
+	]
+};
+/**
+* Реестр документов. Новый отраслевой модуль вызывает registerPackageModule
+* и не меняет ни применимость, ни мастер. У модуля есть id, version и status.
+* Профессии и оборудование по-прежнему живут в каталоге конструктора.
+*/
+var extensions = /* @__PURE__ */ new Map();
+function registerPackageModule(extension) {
+	const documents = (extension.documents ?? []).map((document) => ({
+		...document,
+		id: document.id || document.code,
+		version: document.version || "1.0.0",
+		status: document.status || "active",
+		moduleId: extension.id
+	}));
+	extensions.set(extension.id, {
+		...extension,
+		version: extension.version ?? "1.0.0",
+		status: extension.status ?? "active",
+		documents,
+		facts: extension.facts ?? [],
+		dependencies: extension.dependencies ?? []
+	});
+}
+function listPackageExtensions() {
+	return [...extensions.values()];
+}
+function documentsFor(profile) {
+	const base = [
+		...organizationDocuments(),
+		...instructionDocuments(),
+		...listPackageExtensions().flatMap((item) => item.documents ?? [])
+	];
+	const known = new Set(base.map((item) => item.code));
+	const custom = profile.customProfessions.map((title) => customInstructionDocument(title)).filter((item) => !known.has(item.code));
+	return [...base, ...custom].filter((document) => document.status !== "deprecated");
+}
+function buildPackage(profile) {
+	return composePackage(profile, documentsFor(profile));
+}
+registerPackageModule(coreOshModule);
+var STEPS = [
+	"Организация",
+	"Сотрудники и профессии",
+	"Работы и оборудование",
+	"Опасности и условия",
+	"Проверка данных",
+	"Состав пакета"
+];
+var WORKFLOW_LABEL = {
+	defined: "Определён",
+	clarify: "Нужно уточнить",
+	needs_data: "Нужны данные",
+	ready_to_generate: "Готов к формированию",
+	formed: "Сформирован"
+};
+var STATUS_LABEL = {
+	ready: "данные определены",
+	clarify: "необходимо уточнить",
+	optional: "дополнительный модуль",
+	locked: "генерация будет доступна в полном пакете"
+};
+function PackagePage() {
+	const profile = useApp((state) => state.profile);
+	const step = useApp((state) => state.packageStep);
+	const overrides = useApp((state) => state.overrides);
+	const instructions = useApp((state) => state.instructions);
+	const setPackageStep = useApp((state) => state.setPackageStep);
+	const patchProfile = useApp((state) => state.patchProfile);
+	const toggleProfile = useApp((state) => state.toggleProfile);
+	const setProfileFlag = useApp((state) => state.setProfileFlag);
+	const applyIndustryPreset = useApp((state) => state.applyIndustryPreset);
+	const addProfileCustomProfession = useApp((state) => state.addProfileCustomProfession);
+	const removeProfileCustomProfession = useApp((state) => state.removeProfileCustomProfession);
+	const setProfileValues = useApp((state) => state.setProfileValues);
+	const packageSnapshot = useApp((state) => state.packageSnapshot);
+	const formedDocuments = useApp((state) => state.formedDocuments);
+	const rememberSnapshot = useApp((state) => state.rememberSnapshot);
+	const rememberFormed = useApp((state) => state.rememberFormed);
+	const catalog = (0, import_react.useMemo)(() => buildCatalog(overrides), [overrides]);
+	const pack = (0, import_react.useMemo)(() => buildPackage(profile), [profile]);
+	const [query, setQuery] = (0, import_react.useState)("");
+	const [customName, setCustomName] = (0, import_react.useState)("");
+	const [department, setDepartment] = (0, import_react.useState)("");
+	const [previewId, setPreviewId] = (0, import_react.useState)(null);
+	const formedIds = Object.keys(formedDocuments);
+	const coreItems = pack.items.filter((item) => item.document.moduleId === "core_osh");
+	const missing = missingForItems(profile, coreItems);
+	const titleOf = (kind, id) => {
+		if (kind === "profession") return catalog.professions.find((item) => item.meta.id === id)?.meta.title ?? id;
+		if (kind === "work") return catalog.works.find((item) => item.meta.id === id)?.meta.title ?? id;
+		if (kind === "gear") return catalog.gears.find((item) => item.meta.id === id)?.meta.title ?? id;
+		return catalog.conditions.find((item) => item.meta.id === id)?.meta.title ?? id;
+	};
+	const filtered = catalog.professions.filter((item) => `${item.meta.title} ${item.aliases.join(" ")}`.toLowerCase().includes(query.trim().toLowerCase()));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AppShell, { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+			className: "text-sm font-bold uppercase tracking-wide text-primary",
+			children: [
+				"Шаг ",
+				step + 1,
+				" из 6"
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+			className: "mt-2 text-3xl font-extrabold text-ink",
+			children: "Пакет документов вашей организации"
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-2 max-w-3xl text-sm leading-relaxed text-muted",
+			children: "Система определит необходимые документы на основании деятельности, профессий, оборудования и условий работы. Бесплатный конструктор инструкций остаётся доступен без ограничений."
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
+			className: "mt-4 flex flex-wrap gap-2",
+			children: STEPS.map((label, index) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				type: "button",
+				onClick: () => setPackageStep(index),
+				className: `rounded-full px-3 py-2 text-sm font-semibold ${index === step ? "bg-primary text-primary-ink" : "bg-soft text-ink"}`,
+				children: [
+					index + 1,
+					". ",
+					label
+				]
+			}) }, label))
+		}),
+		step === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "mt-6 grid gap-4",
+			children: [
+				profile.instructionIds.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "rounded-xl bg-accent-soft px-4 py-3 text-sm font-semibold text-accent",
+					children: [
+						"Из уже сформированных инструкций взяты факты: ",
+						profile.instructionIds.length,
+						". Повторно их вводить не нужно."
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+					className: "block text-sm font-bold",
+					children: ["Название организации", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+						className: "mt-2 w-full rounded-xl border border-line bg-surface px-3 py-3 text-sm font-medium",
+						value: profile.name,
+						onChange: (event) => patchProfile({ name: event.target.value })
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 md:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+						className: "block text-sm font-bold",
+						children: ["ИНН", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							className: "mt-2 w-full rounded-xl border border-line bg-surface px-3 py-3 text-sm font-medium",
+							value: profile.inn,
+							onChange: (event) => patchProfile({ inn: event.target.value })
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+						className: "block text-sm font-bold",
+						children: ["Численность", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							type: "number",
+							min: 0,
+							className: "mt-2 w-full rounded-xl border border-line bg-surface px-3 py-3 text-sm font-medium",
+							value: profile.headcount ?? "",
+							onChange: (event) => patchProfile({ headcount: event.target.value === "" ? null : Number(event.target.value) })
+						})]
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+					className: "block text-sm font-bold",
+					children: ["Вид деятельности", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+						className: "mt-2 w-full rounded-xl border border-line bg-surface px-3 py-3 text-sm font-medium",
+						value: profile.activity,
+						onChange: (event) => patchProfile({ activity: event.target.value })
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+					className: "block text-sm font-bold",
+					children: ["Отрасль", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+						className: "mt-2 w-full rounded-xl border border-line bg-surface px-3 py-3 text-sm font-medium",
+						value: profile.industry,
+						onChange: (event) => patchProfile({ industry: event.target.value })
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-sm font-bold",
+						children: "Подразделение"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-2 flex gap-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							className: "w-full rounded-xl border border-line bg-surface px-3 py-3 text-sm font-medium",
+							value: department,
+							onChange: (event) => setDepartment(event.target.value)
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: "rounded-xl bg-soft px-4 text-sm font-bold",
+							onClick: () => {
+								const name = department.trim();
+								if (!name || profile.departments.includes(name)) return;
+								patchProfile({ departments: [...profile.departments, name] });
+								setDepartment("");
+							},
+							children: "Добавить"
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-2 flex flex-wrap gap-2",
+						children: profile.departments.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							className: "rounded-full bg-soft px-3 py-2 text-sm font-semibold",
+							onClick: () => patchProfile({ departments: profile.departments.filter((name) => name !== item) }),
+							children: [item, " ×"]
+						}, item))
+					})
+				] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+						className: "text-lg font-extrabold",
+						children: "Отраслевой старт"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-1 text-sm leading-relaxed text-muted",
+						children: "Пресет только предлагает профессии и условия. Лишнее можно снять. Состав пакета он не назначает."
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-3 grid gap-2 md:grid-cols-2",
+						children: PRESETS.map((preset) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: () => applyIndustryPreset(preset.id),
+							className: `rounded-xl border px-3 py-3 text-left ${profile.presetId === preset.id ? "border-primary bg-soft" : "border-line bg-surface"}`,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "block text-sm font-bold",
+								children: preset.title
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "mt-1 block text-sm text-muted",
+								children: preset.activity
+							})]
+						}, preset.id))
+					})
+				] })
+			]
+		}),
+		step === 1 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "mt-6",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					className: "w-full rounded-xl border border-line bg-surface px-3 py-3 text-sm",
+					placeholder: "Найти профессию",
+					value: query,
+					onChange: (event) => setQuery(event.target.value)
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-3 grid gap-2",
+					children: filtered.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Choice, {
+						checked: profile.professionIds.includes(item.meta.id),
+						title: item.meta.title,
+						text: item.depth === "full" ? "Полная модель конструктора" : "Профессия каталога",
+						onToggle: () => toggleProfile("professionIds", item.meta.id)
+					}, item.meta.id))
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 flex gap-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+						className: "w-full rounded-xl border border-line bg-surface px-3 py-3 text-sm",
+						placeholder: "Должность, которой нет в каталоге",
+						value: customName,
+						onChange: (event) => setCustomName(event.target.value)
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: "rounded-xl bg-soft px-4 text-sm font-bold",
+						onClick: () => {
+							addProfileCustomProfession(customName);
+							setCustomName("");
+						},
+						children: "Добавить"
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-2 flex flex-wrap gap-2",
+					children: profile.customProfessions.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: "rounded-full bg-soft px-3 py-2 text-sm font-semibold",
+						onClick: () => removeProfileCustomProfession(item),
+						children: [item, " ×"]
+					}, item))
+				})
+			]
+		}),
+		step === 2 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "mt-6 grid gap-6",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+				className: "text-lg font-extrabold",
+				children: "Работы"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-3 grid gap-2",
+				children: catalog.works.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Choice, {
+					checked: profile.workIds.includes(item.meta.id),
+					title: item.meta.title,
+					text: item.summary,
+					onToggle: () => toggleProfile("workIds", item.meta.id)
+				}, item.meta.id))
+			})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+				className: "text-lg font-extrabold",
+				children: "Оборудование и инструмент"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-3 grid gap-2",
+				children: catalog.gears.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Choice, {
+					checked: profile.gearIds.includes(item.meta.id),
+					title: item.meta.title,
+					text: GEAR_KIND[item.kind],
+					onToggle: () => toggleProfile("gearIds", item.meta.id)
+				}, item.meta.id))
+			})] })]
+		}),
+		step === 3 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "mt-6 grid gap-6",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+				className: "text-lg font-extrabold",
+				children: "Условия"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-3 grid gap-2",
+				children: catalog.conditions.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Choice, {
+					checked: profile.conditionIds.includes(item.meta.id),
+					title: item.meta.title,
+					text: item.summary,
+					onToggle: () => toggleProfile("conditionIds", item.meta.id)
+				}, item.meta.id))
+			})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "text-lg font-extrabold",
+					children: "Признаки организации"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-1 text-sm text-muted",
+					children: "«Не задано» оставляет документ в списке на уточнение. «Нет» исключает его, если нет другого подтверждённого факта."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-3 grid gap-3",
+					children: FLAG_KEYS.map((key) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriRow, {
+						label: FLAG_LABELS[key],
+						value: profile.flags[key],
+						onChange: (value) => setProfileFlag(key, value)
+					}, key))
+				})
+			] })]
+		}),
+		step === 4 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "mt-6 grid gap-4",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Организация",
+					text: profile.name || "не указана"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Отрасль и деятельность",
+					text: [profile.industry, profile.activity].filter(Boolean).join(" · ") || "не указаны"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Численность",
+					text: profile.headcount == null ? "не указана" : String(profile.headcount)
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Версия профиля",
+					text: String(profile.schemaVersion)
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Профессии",
+					text: [...profile.professionIds.map((id) => titleOf("profession", id)), ...profile.customProfessions].join(", ") || "не выбраны"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Работы",
+					text: profile.workIds.map((id) => titleOf("work", id)).join(", ") || "не выбраны"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Оборудование и инструмент",
+					text: profile.gearIds.map((id) => titleOf("gear", id)).join(", ") || "не выбраны"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Условия",
+					text: profile.conditionIds.map((id) => titleOf("condition", id)).join(", ") || "не выбраны"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fact, {
+					title: "Признаки",
+					text: FLAG_KEYS.map((key) => `${FLAG_LABELS[key]}: ${profile.flags[key] == null ? "не задано" : profile.flags[key] ? "да" : "нет"}`).join("; ")
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "text-sm leading-relaxed text-muted",
+					children: [
+						"Инструкций, из которых собран профиль: ",
+						instructions.length,
+						". Если факт лишний, вернитесь на предыдущий шаг и снимите отметку."
+					]
+				})
+			]
+		}),
+		step === 5 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "mt-6",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "text-lg font-extrabold",
+					children: "Определено автоматически"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "mt-3 grid gap-2 text-sm font-semibold md:grid-cols-2",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Count, {
+							n: pack.counts.orders,
+							label: "приказов"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Count, {
+							n: pack.counts.instructions,
+							label: "инструкций"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Count, {
+							n: pack.counts.policies,
+							label: "положений"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Count, {
+							n: pack.counts.programs,
+							label: "программ обучения"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Count, {
+							n: pack.counts.lists,
+							label: "перечней"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Count, {
+							n: pack.counts.journals,
+							label: "журналов"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Count, {
+							n: pack.counts.ppe,
+							label: "документов по СИЗ"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Count, {
+							n: pack.counts.medical,
+							label: "документов по медосмотрам"
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-3 text-sm font-bold",
+					children: [
+						"Всего: ",
+						pack.counts.total,
+						"."
+					]
+				}),
+				pack.clarifications.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-3 rounded-xl border border-line bg-soft px-4 py-3 text-sm leading-relaxed",
+					children: [
+						"Нужно уточнить: ",
+						pack.clarifications.length,
+						". Пока признак не задан, документ не входит в подтверждённый состав и не отбрасывается.",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: "ml-2 font-bold text-primary",
+							onClick: () => setPackageStep(3),
+							children: "Уточнить признаки"
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-6 rounded-2xl border border-line bg-surface p-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							className: "text-base font-extrabold",
+							children: "Базовая организация охраны труда"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-1 text-sm leading-relaxed text-muted",
+							children: "Первый модуль пакета. Оплата не подключена: отметка «Полный пакет» показывает коммерческий уровень. Бесплатные инструкции по-прежнему собираются в конструкторе."
+						}),
+						packageSnapshot && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-3 rounded-xl bg-soft px-3 py-2 text-sm leading-relaxed",
+							children: [
+								"Состав на момент формирования: ",
+								new Date(packageSnapshot.createdAt).toLocaleString("ru-RU"),
+								", профиль v",
+								packageSnapshot.profileVersion,
+								", документов в снимке: ",
+								packageSnapshot.documents.length,
+								"."
+							]
+						}),
+						missing.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MissingForm, {
+							requirements: missing,
+							onSave: (values) => setProfileValues(missing.map((requirement) => ({
+								field: requirement.field,
+								key: requirement.key,
+								value: values[requirement.id] ?? ""
+							})))
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-3 grid gap-2",
+							children: coreItems.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CoreCard, {
+								item,
+								workflow: workflowOf(item, profile, formedIds),
+								formed: formedDocuments[item.document.id]?.document,
+								previewOpen: previewId === item.document.id,
+								onGenerate: () => {
+									const generatorId = generatorIdOf(item.document);
+									if (!generatorId) return;
+									if (!packageSnapshot) rememberSnapshot(createPackageSnapshot(profile, pack));
+									const generated = generateById(generatorId, profile, item.document);
+									rememberFormed(item.document.id, generated);
+									setPreviewId(item.document.id);
+								},
+								onTogglePreview: () => setPreviewId((current) => current === item.document.id ? null : item.document.id),
+								onDownload: (document) => void downloadGeneratedDocx(document)
+							}, item.document.code))
+						})
+					]
+				}),
+				CATEGORY_ORDER.map((category) => {
+					const rows = pack.items.filter((item) => item.document.category === category && item.document.moduleId !== "core_osh");
+					if (rows.length === 0) return null;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-6",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							className: "text-base font-extrabold",
+							children: CATEGORY_LABELS[category]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-2 grid gap-2",
+							children: rows.map((item) => {
+								const made = item.document.professionId ? instructions.find((entry) => entry.professionId === item.document.professionId) : void 0;
+								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+									className: "rounded-xl border border-line bg-surface px-4 py-3",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "flex flex-wrap items-start justify-between gap-2",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+												className: "text-sm font-bold",
+												children: item.document.name
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+												className: `text-sm font-semibold ${item.status === "ready" ? "text-accent" : item.status === "clarify" ? "text-danger" : "text-muted"}`,
+												children: [
+													item.status === "ready" ? "✓" : item.status === "clarify" ? "!" : item.status === "optional" ? "○" : "🔒",
+													" ",
+													STATUS_LABEL[item.status]
+												]
+											})]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+											className: "mt-1 text-sm text-muted",
+											children: item.reason
+										}),
+										item.status === "ready" && item.document.generator === "instruction" && item.document.professionId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											className: "mt-2",
+											children: made ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+												to: "/instruction/$id",
+												params: { id: made.id },
+												className: "text-sm font-bold text-primary",
+												children: "Открыть сформированную инструкцию"
+											}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+												to: "/wizard",
+												search: {
+													profession: item.document.professionId,
+													scenario: void 0
+												},
+												className: "text-sm font-bold text-primary",
+												children: "Собрать в конструкторе"
+											})
+										})
+									]
+								}, item.document.code);
+							})
+						})]
+					}, category);
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-6 text-sm leading-relaxed text-muted",
+					children: "Остальные документы полного пакета пока не формируются в файл. Оплата не требуется. Инструкции по охране труда по-прежнему собираются бесплатно и без ограничений."
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "mt-6 flex gap-2",
+			children: [step > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "button",
+				className: "rounded-full border border-line bg-surface px-5 py-3 text-sm font-bold",
+				onClick: () => setPackageStep(step - 1),
+				children: "Назад"
+			}), step < 5 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "button",
+				className: "rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-ink",
+				onClick: () => setPackageStep(step + 1),
+				children: "Далее"
+			})]
+		})
+	] });
+}
+function MissingForm({ requirements, onSave }) {
+	const [values, setValues] = (0, import_react.useState)({});
+	const complete = requirements.every((requirement) => (values[requirement.id] ?? "").trim().length > 0);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+		className: "mt-3 rounded-xl bg-soft px-3 py-3",
+		onSubmit: (event) => {
+			event.preventDefault();
+			if (complete) onSave(values);
+		},
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-sm font-bold",
+				children: "Нужны дополнительные данные"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-1 text-sm text-muted",
+				children: "Известные поля из профиля и инструкций уже подставлены. Заполните только то, чего нет."
+			}),
+			requirements.map((requirement) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+				className: "mt-3 block text-sm font-bold",
+				children: [requirement.label, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					required: true,
+					type: requirement.field === "approval_date" ? "date" : "text",
+					className: "mt-1 w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium",
+					value: values[requirement.id] ?? "",
+					onChange: (event) => setValues((current) => ({
+						...current,
+						[requirement.id]: event.target.value
+					}))
+				})]
+			}, requirement.id)),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "submit",
+				disabled: !complete,
+				className: "mt-3 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-ink disabled:opacity-50",
+				children: "Сохранить данные"
+			})
+		]
+	});
+}
+function CoreCard({ item, workflow, formed, previewOpen, onGenerate, onTogglePreview, onDownload }) {
+	const tone = workflow === "formed" || workflow === "ready_to_generate" || workflow === "defined" ? "text-accent" : workflow === "clarify" || workflow === "needs_data" ? "text-danger" : "text-muted";
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+		className: "rounded-xl border border-line px-4 py-3",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex flex-wrap items-start justify-between gap-2",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+					className: "text-sm font-bold",
+					children: item.document.name
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: `text-sm font-semibold ${tone}`,
+					children: workflow ? WORKFLOW_LABEL[workflow] : STATUS_LABEL[item.status]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-1 text-sm text-muted",
+				children: "🔒 Полный пакет"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-1 text-sm text-muted",
+				children: item.reason
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", {
+				className: "mt-2 text-sm text-muted",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("summary", {
+						className: "cursor-pointer font-semibold text-ink",
+						children: "Почему документ включён"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-1",
+						children: [
+							"Результат: ",
+							item.trace.result,
+							"."
+						]
+					}),
+					item.trace.facts.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-1",
+						children: [
+							"Факты: ",
+							item.trace.facts.join(", "),
+							"."
+						]
+					}),
+					item.trace.sources.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-1",
+						children: [
+							"Источники: ",
+							item.trace.sources.join(", "),
+							"."
+						]
+					}),
+					item.trace.missing.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-1",
+						children: [
+							"Не хватает: ",
+							item.trace.missing.join(", "),
+							"."
+						]
+					}),
+					item.trace.matchedRules.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-1",
+						children: [
+							"Правила: ",
+							item.trace.matchedRules.map((rule) => `${rule.group} ${rule.field}${rule.keys.length ? ` (${rule.keys.join(", ")})` : ""}`).join("; "),
+							"."
+						]
+					})
+				]
+			}),
+			workflow === "ready_to_generate" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "button",
+				className: "mt-3 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-ink",
+				onClick: onGenerate,
+				children: "Сформировать"
+			}),
+			workflow === "formed" && formed && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-3 flex flex-wrap gap-2",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: "rounded-full bg-soft px-4 py-2 text-sm font-bold",
+						onClick: onTogglePreview,
+						children: previewOpen ? "Скрыть предпросмотр" : "Предпросмотр"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: "rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-ink",
+						onClick: () => onDownload(formed),
+						children: "Скачать DOCX"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: "rounded-full border border-line px-4 py-2 text-sm font-bold",
+						onClick: onGenerate,
+						children: "Сформировать заново"
+					})
+				]
+			}),
+			previewOpen && formed && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "print-sheet mt-3 rounded-xl border border-line bg-white px-4 py-4 text-sm leading-relaxed text-ink",
+				style: { fontFamily: "var(--font-doc)" },
+				children: formed.blocks.map((block, index) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: block.kind === "heading" ? "text-center text-base font-bold" : block.kind === "right" ? "text-right" : "mt-2 text-left",
+					children: block.text
+				}, index))
+			})
+		]
+	});
+}
+function TriRow({ label, value, onChange }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-3",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "text-sm font-bold",
+			children: label
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "flex gap-1",
+			children: [
+				[true, "Да"],
+				[false, "Нет"],
+				[null, "Не задано"]
+			].map(([option, title]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "button",
+				onClick: () => onChange(option),
+				className: `rounded-full px-3 py-2 text-sm font-semibold ${value === option ? "bg-primary text-primary-ink" : "bg-soft text-ink"}`,
+				children: title
+			}, title))
+		})]
+	});
+}
+function Fact({ title, text }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "rounded-xl border border-line bg-surface px-4 py-3",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "text-sm font-bold",
+			children: title
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-1 text-sm leading-relaxed text-muted",
+			children: text
+		})]
+	});
+}
+function Count({ n, label }) {
+	if (n === 0) return null;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+		className: "rounded-xl bg-accent-soft px-3 py-2 text-accent",
+		children: [
+			"✓ ",
+			n,
+			" ",
+			label
+		]
+	});
+}
+//#endregion
+export { PackagePage as component };

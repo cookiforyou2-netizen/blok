@@ -3,13 +3,14 @@ import { describe, it } from "node:test";
 import { buildCatalog, createInstruction, deriveHazardIds, derivePpeIds, emptyDraft, ppeKey, selectionKey } from "../engine.ts";
 import type { Draft, InstructionRecord } from "../types.ts";
 import { evaluateApplicability, matchApplicability } from "./applicability.ts";
-import { emptyProfile, findFact, mergeFacts, verdictOf } from "./facts.ts";
+import { emptyProfile, findFact, mergeFacts, setFactClock, verdictOf, winningSource } from "./facts.ts";
 import { organizationDocuments } from "./documents.ts";
 import { buildPackage, listPackageExtensions, registerPackageModule } from "./registry.ts";
 import { absorbInstruction, applyPreset, normalizeProfile, userRejected } from "./profile.ts";
 import { createProfileRepository, type KeyValueStorage } from "./storage.ts";
 import { PRESETS, presetById } from "./presets.ts";
 import type { Applicability, DocumentModule, FactInput, OrganizationProfile } from "./types.ts";
+import { FACT_FIELDS } from "./types.ts";
 
 const catalog = buildCatalog();
 const USER = "user-profile";
@@ -331,5 +332,77 @@ describe("пакет документов", () => {
     const decision = evaluateApplicability(blocked, rule);
     assert.equal(decision.applicable, "no");
     assert.match(decision.reasons.join(" "), /welding_explicitly_excluded/);
+  });
+
+  it("признак flag проходит через тот же resolver, что и остальные поля", () => {
+    const used = new Set<string>();
+    const walk = (rule: Applicability) => {
+      for (const atom of [...(rule.all ?? []), ...(rule.any ?? []), ...(rule.none ?? [])]) used.add(atom.field);
+    };
+    for (const document of organizationDocuments()) walk(document.applicability);
+    for (const field of used) assert.equal(FACT_FIELDS.includes(field as (typeof FACT_FIELDS)[number]), true);
+    assert.equal(used.has("flag"), true);
+    const viaFlag = withFacts([confirm("flag", "powerTools")]);
+    const viaGear = withFacts([confirm("equipment", "angle_grinder")]);
+    const rule: Applicability = { any: [{ field: "flag", in: ["powerTools"] }, { field: "equipment", in: ["angle_grinder"] }] };
+    const flagged = evaluateApplicability(viaFlag, rule);
+    const geared = evaluateApplicability(viaGear, rule);
+    assert.equal(flagged.applicable, "yes");
+    assert.equal(geared.applicable, "yes");
+    assert.ok(flagged.trace.facts.includes("flag:powerTools"));
+    assert.ok(geared.trace.facts.includes("equipment:angle_grinder"));
+    assert.equal(flagged.trace.result, "YES");
+  });
+
+  it("последнее явное решение пользователя по УШМ побеждает, история источников не теряется", () => {
+    let tick = 0;
+    setFactClock(() => `2026-03-01T00:00:${String(tick++).padStart(2, "0")}.000Z`);
+    try {
+      const record = createInstruction(catalog, welderDraft());
+      let profile = absorbInstruction(emptyProfile(), record);
+      profile = mergeFacts(profile, [confirm("equipment", "angle_grinder", true)]);
+      profile = mergeFacts(profile, [confirm("equipment", "angle_grinder", false)]);
+      profile = mergeFacts(profile, [confirm("equipment", "angle_grinder", true)]);
+      const fact = findFact(profile, "equipment", "angle_grinder");
+      assert.ok(fact);
+      assert.equal(verdictOf(fact), "yes");
+      assert.equal(winningSource(fact)?.source, "user");
+      assert.equal(winningSource(fact)?.value, true);
+      assert.equal(winningSource(fact)?.status, "confirmed");
+      assert.equal(fact.sources.some((source) => source.source === "instruction" && source.value === true && source.sourceId === record.id), true);
+      assert.equal(fact.sources.some((source) => source.source === "user" && source.value === false && source.status === "rejected"), true);
+      assert.equal(fact.sources.some((source) => source.source === "user" && source.value === true && source.status === "confirmed"), true);
+      assert.equal(profile.gearIds.includes("angle_grinder"), true);
+    } finally {
+      setFactClock(() => new Date().toISOString());
+    }
+  });
+
+  it("у результата документа есть Decision Trace", () => {
+    const ready = withFacts([confirm("profession", "welder"), confirm("work", "welding"), confirm("equipment", "angle_grinder")]);
+    const decision = evaluateApplicability(ready, WELDER_RULE);
+    assert.equal(decision.trace.result, "YES");
+    assert.ok(decision.trace.facts.includes("profession:welder"));
+    assert.ok(decision.trace.facts.includes("work:welding"));
+    assert.ok(decision.trace.facts.includes("equipment:angle_grinder"));
+    assert.ok(decision.trace.matchedRules.some((rule) => rule.group === "all" && rule.field === "profession"));
+    assert.ok(decision.trace.matchedRules.some((rule) => rule.group === "any" && rule.field === "equipment"));
+    assert.deepEqual(decision.trace.missing, []);
+    assert.ok(decision.trace.sources.includes(USER));
+    const item = buildPackage(ready).included.find((entry) => entry.document.code === "order_tools");
+    assert.equal(item?.trace.result, "YES");
+    assert.ok((item?.trace.facts.length ?? 0) > 0);
+  });
+
+  it("сохранённый профиль содержит schemaVersion без миграции", () => {
+    const bucket = memory();
+    const repo = createProfileRepository(bucket, "schema-profile");
+    const saved = repo.setFact(emptyProfile(), confirm("profession", "cook"));
+    assert.equal(saved.schemaVersion, 1);
+    const raw = JSON.parse(bucket.getItem("schema-profile") ?? "{}") as { schemaVersion?: number };
+    assert.equal(raw.schemaVersion, 1);
+    assert.equal(repo.loadProfile().schemaVersion, 1);
+    assert.equal(normalizeProfile({ name: "Школа № 1", professionIds: ["cook"] }).schemaVersion, 1);
+    assert.equal(normalizeProfile({ schemaVersion: 1, facts: saved.facts }).schemaVersion, 1);
   });
 });

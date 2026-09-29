@@ -1,7 +1,7 @@
 import { i as __toESM } from "../_runtime.mjs";
 import { X as require_react, m as useRouterState, w as require_jsx_runtime, x as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { n as create, t as persist } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/shell-D6xK9ynY.js
+//#region node_modules/.nitro/vite/services/ssr/assets/shell-DGAyvdZq.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var DAY = "2026-09-26";
@@ -2709,6 +2709,7 @@ var CATEGORY_ORDER = [
 	"lists",
 	"extra"
 ];
+var MATERIAL_GEAR = /* @__PURE__ */ new Set(["cleaning_agents"]);
 var FOOD_PROFESSIONS = /* @__PURE__ */ new Set([
 	"cook",
 	"confectioner",
@@ -2733,7 +2734,10 @@ var TRANSPORT_GEAR = /* @__PURE__ */ new Set([
 	"self_propelled"
 ]);
 var ELECTRICAL_WORKS = /* @__PURE__ */ new Set(["work_electrical_install", "work_electrical_maint"]);
-var MATERIAL_GEAR = /* @__PURE__ */ new Set(["cleaning_agents"]);
+var clock = () => (/* @__PURE__ */ new Date()).toISOString();
+function factId(field, key) {
+	return `${field}:${key}`;
+}
 function emptyFlags() {
 	return {
 		height: null,
@@ -2751,6 +2755,7 @@ function emptyFlags() {
 }
 function emptyProfile() {
 	return {
+		schemaVersion: 1,
 		name: "",
 		inn: "",
 		activity: "",
@@ -2768,136 +2773,556 @@ function emptyProfile() {
 		ppeIds: [],
 		flags: emptyFlags(),
 		instructionIds: [],
-		presetId: null
+		presetId: null,
+		facts: []
 	};
 }
-function uniq(values) {
-	const seen = /* @__PURE__ */ new Set();
-	const result = [];
-	for (const value of values) {
-		const item = value.trim();
-		if (!item || seen.has(item)) continue;
-		seen.add(item);
-		result.push(item);
-	}
-	return result;
+/**
+* 1 — явное решение пользователя;
+* 2 — подтверждённый профиль (confirmed/rejected не от пресета);
+* 3 — инструкция, импорт и системный вывод из них;
+* 4 — отраслевой пресет.
+* Пресет никогда не побеждает более высокий источник.
+* При равном ранге побеждает более позднее наблюдение: последнее явное решение пользователя.
+*/
+function sourceRank(source) {
+	if (source.source === "user" && (source.status === "confirmed" || source.status === "rejected")) return 400;
+	if (source.status === "confirmed" || source.status === "rejected") return 300;
+	if (source.source === "instruction" || source.source === "import" || source.source === "system") return 200;
+	if (source.source === "preset") return 100;
+	return 0;
 }
+function winningSource(fact) {
+	if (!fact || fact.sources.length === 0) return null;
+	return fact.sources.reduce((best, source) => {
+		if (!best) return source;
+		const rank = sourceRank(source) - sourceRank(best);
+		if (rank !== 0) return rank > 0 ? source : best;
+		return source.updatedAt >= best.updatedAt ? source : best;
+	}, null);
+}
+/** Для применимости пресет-only не доказательство: это UNKNOWN, а не YES. */
+function verdictOf(fact) {
+	const winner = winningSource(fact);
+	if (!winner) return "unknown";
+	if (winner.status === "rejected" || winner.value === false) return "no";
+	if (winner.source === "preset" && winner.status !== "confirmed") return "unknown";
+	if (winner.value === true) return "yes";
+	if (typeof winner.value === "string") return winner.value.trim() ? "yes" : "unknown";
+	if (typeof winner.value === "number") return Number.isFinite(winner.value) ? "yes" : "unknown";
+	return "unknown";
+}
+/** Что показать в мастере: предложение пресета видно и снимается, отказ пользователя скрывает пункт. */
+function displayed(fact) {
+	const winner = winningSource(fact);
+	if (!winner || winner.status === "rejected" || winner.value === false) return false;
+	return winner.value === true;
+}
+function findFact(profile, field, key) {
+	const id = factId(field, key);
+	return profile.facts.find((fact) => fact.id === id);
+}
+function cloneFact(fact) {
+	return {
+		...fact,
+		sources: fact.sources.map((source) => ({ ...source }))
+	};
+}
+function sameDecision(source, input) {
+	return source.source === input.source && source.sourceId === input.sourceId && source.status === input.status && source.value === input.value;
+}
+function mergeFactList(profile, inputs, now = clock()) {
+	const facts = profile.facts.map(cloneFact);
+	for (const input of inputs) {
+		const id = factId(input.field, input.key);
+		let fact = facts.find((item) => item.id === id);
+		if (!fact) {
+			fact = {
+				id,
+				field: input.field,
+				key: input.key,
+				sources: []
+			};
+			facts.push(fact);
+		}
+		const existing = fact.sources.find((source) => sameDecision(source, input));
+		if (existing) {
+			existing.updatedAt = now;
+			const index = fact.sources.indexOf(existing);
+			if (index >= 0 && index < fact.sources.length - 1) {
+				fact.sources.splice(index, 1);
+				fact.sources.push(existing);
+			}
+		} else fact.sources.push({
+			source: input.source,
+			sourceId: input.sourceId,
+			status: input.status,
+			value: input.value,
+			createdAt: now,
+			updatedAt: now
+		});
+	}
+	return {
+		...profile,
+		facts
+	};
+}
+function removeFactList(profile, id, source) {
+	const facts = profile.facts.flatMap((fact) => {
+		if (fact.id !== id) return [cloneFact(fact)];
+		if (!source) return [];
+		const sources = fact.sources.filter((item) => !(item.source === source.source && item.sourceId === source.sourceId));
+		if (sources.length === 0) return [];
+		return [{
+			...fact,
+			sources
+		}];
+	});
+	return {
+		...profile,
+		facts
+	};
+}
+function confirmingKeys(profile, field) {
+	const keys = /* @__PURE__ */ new Set();
+	for (const fact of profile.facts) if (fact.field === field) {
+		if (verdictOf(fact) === "yes") keys.add(fact.key);
+	}
+	return keys;
+}
+function deriveInputs(profile) {
+	const equipment = confirmingKeys(profile, "equipment");
+	const works = confirmingKeys(profile, "work");
+	const conditions = confirmingKeys(profile, "condition");
+	const hazards = confirmingKeys(profile, "hazard");
+	const professions = confirmingKeys(profile, "profession");
+	const ppe = confirmingKeys(profile, "ppe");
+	const custom = confirmingKeys(profile, "custom_profession");
+	const inputs = [];
+	const flag = (key, on) => {
+		if (!on) return;
+		inputs.push({
+			field: "flag",
+			key,
+			value: true,
+			source: "system",
+			sourceId: `derive:${key}`,
+			status: "inferred"
+		});
+	};
+	flag("height", conditions.has("cond_height") || equipment.has("ladder") || hazards.has("fall_height"));
+	flag("electrical", conditions.has("cond_live") || [...works].some((id) => ELECTRICAL_WORKS.has(id)) || equipment.has("voltage_indicator") || equipment.has("insulated_tools"));
+	flag("food", conditions.has("cond_hot_kitchen") || works.has("work_kitchen") || [...professions].some((id) => FOOD_PROFESSIONS.has(id)));
+	flag("warehouse", works.has("work_stacking") || [...professions].some((id) => WAREHOUSE_PROFESSIONS.has(id)));
+	flag("production", conditions.has("cond_hot_zone") || conditions.has("cond_hot_metal") || works.has("work_manual_arc") || works.has("work_locksmith"));
+	flag("transport", works.has("work_driving") || conditions.has("cond_traffic") || [...equipment].some((id) => TRANSPORT_GEAR.has(id)));
+	flag("hazardousWork", [
+		"cond_height",
+		"cond_confined",
+		"cond_hot_zone",
+		"cond_explosive"
+	].some((id) => conditions.has(id)) || equipment.has("ladder") || equipment.has("gas_cylinder") || works.has("work_gas_cutting") || works.has("work_slinging"));
+	flag("powerTools", equipment.has("angle_grinder") || equipment.has("drill"));
+	flag("ppe", ppe.size > 0 || professions.size > 0 || custom.size > 0);
+	return inputs;
+}
+function stripSystem(profile) {
+	const facts = profile.facts.flatMap((fact) => {
+		const sources = fact.sources.filter((source) => source.source !== "system");
+		if (sources.length === 0) return [];
+		return [{
+			...fact,
+			sources: sources.map((source) => ({ ...source }))
+		}];
+	});
+	return {
+		...profile,
+		facts
+	};
+}
+function previousSystem(profile, id, sourceId) {
+	return profile.facts.find((fact) => fact.id === id)?.sources.find((source) => source.source === "system" && source.sourceId === sourceId);
+}
+function readIds(profile, field) {
+	return profile.facts.filter((fact) => fact.field === field && displayed(fact)).map((fact) => fact.key);
+}
+function readString(profile, field) {
+	const winner = winningSource(findFact(profile, field, "value"));
+	if (!winner || winner.status === "rejected" || typeof winner.value !== "string") return "";
+	return winner.value;
+}
+function readNumber(profile, field) {
+	const winner = winningSource(findFact(profile, field, "value"));
+	if (!winner || winner.status === "rejected" || typeof winner.value !== "number" || !Number.isFinite(winner.value)) return null;
+	return winner.value;
+}
+function readFlags(profile) {
+	const flags = emptyFlags();
+	for (const key of FLAG_KEYS) {
+		const winner = winningSource(findFact(profile, "flag", key));
+		if (!winner) continue;
+		if (winner.status === "rejected" || winner.value === false) flags[key] = false;
+		else if (winner.source === "preset") flags[key] = null;
+		else if (winner.value === true) flags[key] = true;
+	}
+	return flags;
+}
+/** Собирает списки мастера из фактов и заново выводит системные признаки только из подтверждённых источников. */
+function projectProfile(profile) {
+	const stripped = stripSystem(profile);
+	const merged = mergeFactList(stripped, deriveInputs(stripped));
+	const facts = merged.facts.map((fact) => ({
+		...fact,
+		sources: fact.sources.map((source) => {
+			if (source.source !== "system") return source;
+			const previous = previousSystem(profile, fact.id, source.sourceId);
+			if (previous && previous.value === source.value && previous.status === source.status) return { ...previous };
+			return source;
+		})
+	}));
+	const next = {
+		...merged,
+		facts,
+		schemaVersion: profile.schemaVersion || 1
+	};
+	const gearIds = readIds(next, "equipment");
+	return {
+		...next,
+		schemaVersion: next.schemaVersion || 1,
+		name: readString(next, "name"),
+		inn: readString(next, "inn"),
+		activity: readString(next, "activity"),
+		industry: readString(next, "industry"),
+		headcount: readNumber(next, "headcount"),
+		departments: readIds(next, "department"),
+		professionIds: readIds(next, "profession"),
+		customProfessions: readIds(next, "custom_profession"),
+		positions: readIds(next, "position"),
+		workIds: readIds(next, "work"),
+		gearIds,
+		conditionIds: readIds(next, "condition"),
+		hazardIds: readIds(next, "hazard"),
+		materialIds: [.../* @__PURE__ */ new Set([...readIds(next, "material"), ...gearIds.filter((id) => MATERIAL_GEAR.has(id))])],
+		ppeIds: readIds(next, "ppe"),
+		flags: readFlags(next),
+		instructionIds: profile.instructionIds,
+		presetId: profile.presetId
+	};
+}
+function mergeFacts(profile, inputs) {
+	return projectProfile(mergeFactList(profile, inputs));
+}
+function removeFact(profile, id, source) {
+	return projectProfile(removeFactList(profile, id, source));
+}
+function resolvedValue(profile, field, key) {
+	const winner = winningSource(findFact(profile, field, key));
+	if (!winner || winner.status === "rejected") return winner?.value === false ? false : null;
+	return winner.value;
+}
+var USER = "user-profile";
 function asStrings(value) {
 	if (!Array.isArray(value)) return [];
 	return value.filter((item) => typeof item === "string");
 }
-/** Достраивает новые поля старого профиля и не затирает уже отвеченные признаки. */
+function readSchemaVersion(value) {
+	return typeof value === "number" && Number.isFinite(value) ? value : 1;
+}
+function legacyInputs(field, keys, value, status) {
+	return keys.map((key) => ({
+		field,
+		key,
+		value,
+		source: "user",
+		sourceId: "legacy-profile",
+		status
+	}));
+}
+function isFact(value) {
+	if (!value || typeof value !== "object") return false;
+	const fact = value;
+	return typeof fact.id === "string" && typeof fact.field === "string" && typeof fact.key === "string" && Array.isArray(fact.sources);
+}
+/** Старый профиль без фактов превращается в подтверждённые пользовательские факты и не теряет ответы «нет». */
 function normalizeProfile(raw) {
 	const source = raw && typeof raw === "object" ? raw : {};
+	const instructionIds = asStrings(source.instructionIds);
+	const presetId = typeof source.presetId === "string" ? source.presetId : null;
+	const schemaVersion = readSchemaVersion(source.schemaVersion);
+	if (Array.isArray(source.facts) && source.facts.some(isFact)) return projectProfile({
+		...emptyProfile(),
+		schemaVersion,
+		instructionIds,
+		presetId,
+		facts: source.facts.filter(isFact)
+	});
 	const flags = emptyFlags();
 	const savedFlags = source.flags ?? {};
 	for (const key of FLAG_KEYS) {
 		const value = savedFlags[key];
 		flags[key] = value === true || value === false ? value : null;
 	}
-	return inferProfile({
-		name: typeof source.name === "string" ? source.name : "",
-		inn: typeof source.inn === "string" ? source.inn : "",
-		activity: typeof source.activity === "string" ? source.activity : "",
-		industry: typeof source.industry === "string" ? source.industry : "",
-		headcount: typeof source.headcount === "number" && Number.isFinite(source.headcount) ? source.headcount : null,
-		departments: asStrings(source.departments),
-		professionIds: asStrings(source.professionIds),
-		customProfessions: asStrings(source.customProfessions),
-		positions: asStrings(source.positions),
-		workIds: asStrings(source.workIds),
-		gearIds: asStrings(source.gearIds),
-		conditionIds: asStrings(source.conditionIds),
-		hazardIds: asStrings(source.hazardIds),
-		materialIds: asStrings(source.materialIds),
-		ppeIds: asStrings(source.ppeIds),
-		flags,
-		instructionIds: asStrings(source.instructionIds),
-		presetId: typeof source.presetId === "string" ? source.presetId : null
-	});
-}
-function yes(flags, key, on) {
-	if (on && flags[key] === null) flags[key] = true;
-}
-/** Ставит «да» только там, где признак ещё не отвечен и факт уже есть в профиле. «Нет» не перетирается. */
-function inferFlags(profile) {
-	const flags = { ...profile.flags };
-	yes(flags, "height", profile.conditionIds.includes("cond_height") || profile.gearIds.includes("ladder") || profile.hazardIds.includes("fall_height"));
-	yes(flags, "electrical", profile.conditionIds.includes("cond_live") || profile.workIds.some((id) => ELECTRICAL_WORKS.has(id)) || profile.gearIds.includes("voltage_indicator") || profile.gearIds.includes("insulated_tools"));
-	yes(flags, "food", profile.conditionIds.includes("cond_hot_kitchen") || profile.workIds.includes("work_kitchen") || profile.professionIds.some((id) => FOOD_PROFESSIONS.has(id)));
-	yes(flags, "warehouse", profile.workIds.includes("work_stacking") || profile.professionIds.some((id) => WAREHOUSE_PROFESSIONS.has(id)));
-	yes(flags, "production", profile.conditionIds.includes("cond_hot_zone") || profile.conditionIds.includes("cond_hot_metal") || profile.workIds.includes("work_manual_arc") || profile.workIds.includes("work_locksmith"));
-	yes(flags, "transport", profile.workIds.includes("work_driving") || profile.conditionIds.includes("cond_traffic") || profile.gearIds.some((id) => TRANSPORT_GEAR.has(id)));
-	yes(flags, "hazardousWork", profile.conditionIds.some((id) => [
-		"cond_height",
-		"cond_confined",
-		"cond_hot_zone",
-		"cond_explosive"
-	].includes(id)) || profile.gearIds.includes("ladder") || profile.gearIds.includes("gas_cylinder") || profile.workIds.includes("work_gas_cutting") || profile.workIds.includes("work_slinging"));
-	yes(flags, "powerTools", profile.gearIds.includes("angle_grinder") || profile.gearIds.includes("drill"));
-	yes(flags, "ppe", profile.ppeIds.length > 0 || profile.professionIds.length > 0 || profile.customProfessions.length > 0);
-	return flags;
-}
-function inferProfile(profile) {
-	const materialIds = uniq([...profile.materialIds.filter((id) => !MATERIAL_GEAR.has(id)), ...profile.gearIds.filter((id) => MATERIAL_GEAR.has(id))]);
-	const next = {
-		...profile,
-		materialIds
-	};
-	return {
-		...next,
-		flags: inferFlags(next)
-	};
-}
-function applyPreset(profile, preset) {
-	const flags = { ...profile.flags };
+	const inputs = [
+		...legacyInputs("profession", asStrings(source.professionIds), true, "confirmed"),
+		...legacyInputs("custom_profession", asStrings(source.customProfessions), true, "confirmed"),
+		...legacyInputs("position", asStrings(source.positions), true, "confirmed"),
+		...legacyInputs("work", asStrings(source.workIds), true, "confirmed"),
+		...legacyInputs("equipment", asStrings(source.gearIds), true, "confirmed"),
+		...legacyInputs("condition", asStrings(source.conditionIds), true, "confirmed"),
+		...legacyInputs("hazard", asStrings(source.hazardIds), true, "confirmed"),
+		...legacyInputs("material", asStrings(source.materialIds), true, "confirmed"),
+		...legacyInputs("ppe", asStrings(source.ppeIds), true, "confirmed"),
+		...legacyInputs("department", asStrings(source.departments), true, "confirmed")
+	];
 	for (const key of FLAG_KEYS) {
-		const suggested = preset.flags[key];
-		if (suggested !== void 0 && flags[key] === null) flags[key] = suggested;
+		if (flags[key] === true) inputs.push({
+			field: "flag",
+			key,
+			value: true,
+			source: "user",
+			sourceId: "legacy-profile",
+			status: "confirmed"
+		});
+		if (flags[key] === false) inputs.push({
+			field: "flag",
+			key,
+			value: false,
+			source: "user",
+			sourceId: "legacy-profile",
+			status: "rejected"
+		});
 	}
-	return inferProfile({
-		...profile,
-		industry: profile.industry.trim() ? profile.industry : preset.industry,
-		activity: profile.activity.trim() ? profile.activity : preset.activity,
-		presetId: preset.id,
-		professionIds: uniq([...profile.professionIds, ...preset.professionIds]),
-		workIds: uniq([...profile.workIds, ...preset.workIds]),
-		gearIds: uniq([...profile.gearIds, ...preset.gearIds]),
-		conditionIds: uniq([...profile.conditionIds, ...preset.conditionIds]),
-		flags
+	const text = [
+		["name", typeof source.name === "string" ? source.name : ""],
+		["inn", typeof source.inn === "string" ? source.inn : ""],
+		["activity", typeof source.activity === "string" ? source.activity : ""],
+		["industry", typeof source.industry === "string" ? source.industry : ""]
+	];
+	for (const [field, value] of text) if (value.trim()) inputs.push({
+		field,
+		key: "value",
+		value,
+		source: "user",
+		sourceId: "legacy-profile",
+		status: "confirmed"
+	});
+	if (typeof source.headcount === "number" && Number.isFinite(source.headcount)) inputs.push({
+		field: "headcount",
+		key: "value",
+		value: source.headcount,
+		source: "user",
+		sourceId: "legacy-profile",
+		status: "confirmed"
+	});
+	return projectProfile({
+		...mergeFactList(emptyProfile(), inputs),
+		schemaVersion,
+		instructionIds,
+		presetId
 	});
 }
-/** Идемпотентно переносит факты одной инструкции в профиль. Повтор того же id ничего не меняет. */
+function suggest(field, keys, presetId, value = true) {
+	return keys.map((key) => ({
+		field,
+		key,
+		value,
+		source: "preset",
+		sourceId: presetId,
+		status: "inferred"
+	}));
+}
+/** Пресет добавляет источники inferred и не затирает уже принятое пользователем решение. */
+function applyPreset(profile, preset) {
+	const inputs = [
+		...suggest("profession", preset.professionIds, preset.id),
+		...suggest("work", preset.workIds, preset.id),
+		...suggest("equipment", preset.gearIds, preset.id),
+		...suggest("condition", preset.conditionIds, preset.id)
+	];
+	for (const key of FLAG_KEYS) if (preset.flags[key] === true) inputs.push({
+		field: "flag",
+		key,
+		value: true,
+		source: "preset",
+		sourceId: preset.id,
+		status: "inferred"
+	});
+	if (!profile.industry.trim()) inputs.push({
+		field: "industry",
+		key: "value",
+		value: preset.industry,
+		source: "preset",
+		sourceId: preset.id,
+		status: "inferred"
+	});
+	if (!profile.activity.trim()) inputs.push({
+		field: "activity",
+		key: "value",
+		value: preset.activity,
+		source: "preset",
+		sourceId: preset.id,
+		status: "inferred"
+	});
+	return projectProfile({
+		...mergeFactList(profile, inputs),
+		presetId: preset.id
+	});
+}
+function snapshotInputs(record) {
+	const snap = record.snapshot;
+	const inputs = [];
+	const add = (field, key) => {
+		if (!key) return;
+		inputs.push({
+			field,
+			key,
+			value: true,
+			source: "instruction",
+			sourceId: record.id,
+			status: "inferred"
+		});
+	};
+	if (record.professionId) add("profession", record.professionId);
+	else if (record.professionTitle) add("custom_profession", record.professionTitle);
+	if (record.professionTitle) add("position", record.professionTitle);
+	for (const item of snap.works) add("work", item.id);
+	for (const item of snap.gears) add("equipment", item.id);
+	for (const item of snap.conditions) add("condition", item.id);
+	for (const item of snap.hazards) add("hazard", item.id);
+	for (const item of snap.ppe) add("ppe", item.id);
+	for (const item of snap.gears) if (item.kind === "material") add("material", item.id);
+	if (snap.sout.length > 0) add("flag", "sout");
+	return inputs;
+}
+/** Повтор той же инструкции не плодит факты: источник с тем же id обновляется на месте. */
 function absorbInstruction(profile, record) {
 	if (profile.instructionIds.includes(record.id)) return profile;
-	const snap = record.snapshot;
-	const flags = { ...profile.flags };
-	if (snap.sout.length > 0 && flags.sout === null) flags.sout = true;
-	const professionIds = record.professionId ? uniq([...profile.professionIds, record.professionId]) : profile.professionIds;
-	const customProfessions = !record.professionId && record.professionTitle ? uniq([...profile.customProfessions, record.professionTitle]) : profile.customProfessions;
-	const name = profile.name.trim() || (record.orgName && record.orgName !== "Организация не указана" ? record.orgName : profile.name);
-	return inferProfile({
-		...profile,
-		name,
-		professionIds,
-		customProfessions,
-		positions: uniq([...profile.positions, record.professionTitle]),
-		workIds: uniq([...profile.workIds, ...snap.works.map((item) => item.id)]),
-		gearIds: uniq([...profile.gearIds, ...snap.gears.map((item) => item.id)]),
-		conditionIds: uniq([...profile.conditionIds, ...snap.conditions.map((item) => item.id)]),
-		hazardIds: uniq([...profile.hazardIds, ...snap.hazards.map((item) => item.id)]),
-		ppeIds: uniq([...profile.ppeIds, ...snap.ppe.map((item) => item.id)]),
-		materialIds: uniq([...profile.materialIds, ...snap.gears.filter((item) => item.kind === "material").map((item) => item.id)]),
-		flags,
+	const inputs = snapshotInputs(record);
+	const name = profile.name.trim() || (record.orgName && record.orgName !== "Организация не указана" ? record.orgName : "");
+	if (name && !profile.name.trim()) inputs.push({
+		field: "name",
+		key: "value",
+		value: name,
+		source: "instruction",
+		sourceId: record.id,
+		status: "inferred"
+	});
+	return projectProfile({
+		...mergeFactList(profile, inputs),
 		instructionIds: [...profile.instructionIds, record.id]
 	});
 }
 function absorbAll(profile, records) {
 	return records.reduce((next, record) => absorbInstruction(next, record), profile);
 }
+/** Записывает текстовый факт пользователя. Пустая строка снимает только пользовательский источник. */
+function setTextFact(profile, field, key, value) {
+	if (!value.trim()) return removeFact(profile, factId(field, key), {
+		source: "user",
+		sourceId: USER
+	});
+	return mergeFacts(profile, [{
+		field,
+		key,
+		value: value.trim(),
+		source: "user",
+		sourceId: USER,
+		status: "confirmed"
+	}]);
+}
+function setText(profile, field, value) {
+	return setTextFact(profile, field, "value", value);
+}
+function patchOrganization(profile, patch) {
+	let next = profile;
+	if (typeof patch.name === "string") next = setText(next, "name", patch.name);
+	if (typeof patch.inn === "string") next = setText(next, "inn", patch.inn);
+	if (typeof patch.activity === "string") next = setText(next, "activity", patch.activity);
+	if (typeof patch.industry === "string") next = setText(next, "industry", patch.industry);
+	if (patch.headcount === null) next = removeFact(next, factId("headcount", "value"), {
+		source: "user",
+		sourceId: USER
+	});
+	else if (typeof patch.headcount === "number" && Number.isFinite(patch.headcount)) next = mergeFacts(next, [{
+		field: "headcount",
+		key: "value",
+		value: patch.headcount,
+		source: "user",
+		sourceId: USER,
+		status: "confirmed"
+	}]);
+	if (patch.departments) {
+		for (const name of next.departments) if (!patch.departments.includes(name)) next = removeFact(next, factId("department", name));
+		next = mergeFacts(next, patch.departments.map((key) => ({
+			field: "department",
+			key,
+			value: true,
+			source: "user",
+			sourceId: USER,
+			status: "confirmed"
+		})));
+	}
+	return next;
+}
+var LIST_FIELD = {
+	professionIds: "profession",
+	workIds: "work",
+	gearIds: "equipment",
+	conditionIds: "condition",
+	hazardIds: "hazard",
+	ppeIds: "ppe"
+};
+function toggleListedFact(profile, field, id) {
+	const selected = profile[field].includes(id);
+	return mergeFacts(profile, [{
+		field: LIST_FIELD[field],
+		key: id,
+		value: !selected,
+		source: "user",
+		sourceId: USER,
+		status: selected ? "rejected" : "confirmed"
+	}]);
+}
+function setFlagFact(profile, key, value) {
+	if (value === null) return removeFact(profile, factId("flag", key), {
+		source: "user",
+		sourceId: USER
+	});
+	return mergeFacts(profile, [{
+		field: "flag",
+		key,
+		value,
+		source: "user",
+		sourceId: USER,
+		status: value ? "confirmed" : "rejected"
+	}]);
+}
+function addCustomProfession(profile, title) {
+	const name = title.trim();
+	if (name.length < 2 || profile.customProfessions.includes(name)) return profile;
+	return mergeFacts(profile, [{
+		field: "custom_profession",
+		key: name,
+		value: true,
+		source: "user",
+		sourceId: USER,
+		status: "confirmed"
+	}, {
+		field: "position",
+		key: name,
+		value: true,
+		source: "user",
+		sourceId: USER,
+		status: "confirmed"
+	}]);
+}
+function removeCustomProfession(profile, title) {
+	return removeFact(profile, factId("custom_profession", title));
+}
 /**
-* Пресет заполняет профиль и больше ничего.
-* Документов, кодов и готового пакета здесь нет: состав считает applicability.
+* Пресет — не факт организации и не готовый пакет.
+* Он только предлагает значения с источником preset и статусом inferred.
+* Состав документов считает applicability. Пользователь может снять любое предложение.
 */
 var PRESETS = [
 	{
@@ -3140,6 +3565,60 @@ var PRESETS = [
 function presetById(id) {
 	return PRESETS.find((item) => item.id === id);
 }
+var BrowserProfileStorage = class {
+	bucket;
+	storageKey;
+	constructor(bucket, storageKey = "ychy-iot-profile-v1") {
+		this.bucket = bucket ?? browserStorage();
+		this.storageKey = storageKey;
+	}
+	loadProfile() {
+		try {
+			const raw = this.bucket.getItem(this.storageKey);
+			if (!raw) return emptyProfile();
+			return normalizeProfile(JSON.parse(raw));
+		} catch {
+			return emptyProfile();
+		}
+	}
+	saveProfile(profile) {
+		this.bucket.setItem(this.storageKey, JSON.stringify(profile));
+	}
+	mergeFacts(profile, facts) {
+		const next = mergeFacts(profile, facts);
+		this.saveProfile(next);
+		return next;
+	}
+	setFact(profile, fact) {
+		return this.mergeFacts(profile, [fact]);
+	}
+	getFact(factId, profile) {
+		return (profile ?? this.loadProfile()).facts.find((fact) => fact.id === factId);
+	}
+	removeFact(profile, factId, source) {
+		const next = removeFact(profile, factId, source);
+		this.saveProfile(next);
+		return next;
+	}
+};
+function memoryStorage() {
+	const data = /* @__PURE__ */ new Map();
+	return {
+		getItem: (key) => data.get(key) ?? null,
+		setItem: (key, value) => {
+			data.set(key, value);
+		},
+		removeItem: (key) => {
+			data.delete(key);
+		}
+	};
+}
+function browserStorage() {
+	if (typeof localStorage !== "undefined") return localStorage;
+	return memoryStorage();
+}
+/** Текущая реализация. Мастер и applicability к localStorage не обращаются. */
+var profileRepository = new BrowserProfileStorage();
 var useApp = create()(persist((set, get) => ({
 	draft: emptyDraft(),
 	step: 0,
@@ -3147,6 +3626,8 @@ var useApp = create()(persist((set, get) => ({
 	overrides: emptyOverrides(),
 	profile: emptyProfile(),
 	packageStep: 0,
+	packageSnapshot: null,
+	formedDocuments: {},
 	setStep: (step) => set({ step }),
 	patchDraft: (patch) => set({ draft: {
 		...get().draft,
@@ -3296,6 +3777,7 @@ var useApp = create()(persist((set, get) => ({
 		};
 		const record = createInstruction(catalog, draft);
 		const profile = absorbInstruction(state.profile ?? emptyProfile(), record);
+		profileRepository.saveProfile(profile);
 		set({
 			draft,
 			instructions: [record, ...state.instructions].slice(0, 40),
@@ -3362,57 +3844,56 @@ var useApp = create()(persist((set, get) => ({
 	},
 	setPackageStep: (packageStep) => set({ packageStep }),
 	patchProfile: (patch) => {
-		const current = get().profile;
-		set({ profile: inferProfile({
-			...current,
-			...patch,
-			flags: {
-				...current.flags,
-				...patch.flags ?? {}
-			}
-		}) });
+		const profile = patchOrganization(get().profile, patch);
+		profileRepository.saveProfile(profile);
+		set({ profile });
 	},
 	toggleProfile: (field, id) => {
-		const current = get().profile[field];
-		const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-		set({ profile: inferProfile({
-			...get().profile,
-			[field]: next
-		}) });
+		const profile = toggleListedFact(get().profile, field, id);
+		profileRepository.saveProfile(profile);
+		set({ profile });
 	},
 	setProfileFlag: (key, value) => {
-		const current = get().profile;
-		set({ profile: {
-			...current,
-			flags: {
-				...current.flags,
-				[key]: value
-			}
-		} });
+		const profile = setFlagFact(get().profile, key, value);
+		profileRepository.saveProfile(profile);
+		set({ profile });
 	},
 	applyIndustryPreset: (id) => {
 		const preset = presetById(id);
 		if (!preset) return;
-		set({ profile: applyPreset(get().profile, preset) });
+		const profile = applyPreset(get().profile, preset);
+		profileRepository.saveProfile(profile);
+		set({ profile });
 	},
 	addProfileCustomProfession: (title) => {
-		const name = title.trim();
-		if (name.length < 2 || get().profile.customProfessions.includes(name)) return;
-		const current = get().profile;
-		set({ profile: inferProfile({
-			...current,
-			customProfessions: [...current.customProfessions, name],
-			positions: current.positions.includes(name) ? current.positions : [...current.positions, name]
-		}) });
+		const profile = addCustomProfession(get().profile, title);
+		profileRepository.saveProfile(profile);
+		set({ profile });
 	},
 	removeProfileCustomProfession: (title) => {
-		const current = get().profile;
-		set({ profile: inferProfile({
-			...current,
-			customProfessions: current.customProfessions.filter((item) => item !== title)
-		}) });
+		const profile = removeCustomProfession(get().profile, title);
+		profileRepository.saveProfile(profile);
+		set({ profile });
 	},
-	syncProfile: () => set({ profile: absorbAll(normalizeProfile(get().profile), get().instructions) })
+	syncProfile: () => {
+		const profile = absorbAll(normalizeProfile(get().profile), get().instructions);
+		profileRepository.saveProfile(profile);
+		set({ profile });
+	},
+	setProfileValues: (entries) => {
+		let profile = get().profile;
+		for (const entry of entries) profile = setTextFact(profile, entry.field, entry.key, entry.value);
+		profileRepository.saveProfile(profile);
+		set({ profile });
+	},
+	rememberSnapshot: (packageSnapshot) => set({ packageSnapshot }),
+	rememberFormed: (id, document) => set({ formedDocuments: {
+		...get().formedDocuments,
+		[id]: {
+			formedAt: (/* @__PURE__ */ new Date()).toISOString(),
+			document
+		}
+	} })
 }), {
 	name: "ychy-iot-v1",
 	skipHydration: true,
@@ -3434,7 +3915,9 @@ var useApp = create()(persist((set, get) => ({
 				customProfessions: savedOverrides?.customProfessions ?? []
 			},
 			profile: normalizeProfile(saved.profile),
-			packageStep: typeof saved.packageStep === "number" ? saved.packageStep : 0
+			packageStep: typeof saved.packageStep === "number" ? saved.packageStep : 0,
+			packageSnapshot: saved.packageSnapshot ?? null,
+			formedDocuments: saved.formedDocuments ?? {}
 		};
 	}
 }));
@@ -3553,4 +4036,4 @@ function Choice({ checked, title, text, onToggle }) {
 	});
 }
 //#endregion
-export { Choice as a, PRESETS as c, professionTitle as d, professions as f, CATEGORY_ORDER as i, SECTION_LABEL as l, useApp as m, AppShell as n, FLAG_KEYS as o, professionsUsingModule as p, CATEGORY_LABELS as r, FLAG_LABELS as s, APPROVAL_LINES as t, buildCatalog as u };
+export { verdictOf as _, Choice as a, PRESETS as c, findFact as d, professionTitle as f, useApp as g, resolvedValue as h, CATEGORY_ORDER as i, SECTION_LABEL as l, professionsUsingModule as m, AppShell as n, FLAG_KEYS as o, professions as p, CATEGORY_LABELS as r, FLAG_LABELS as s, APPROVAL_LINES as t, buildCatalog as u, winningSource as v };

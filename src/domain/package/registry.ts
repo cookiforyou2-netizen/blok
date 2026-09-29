@@ -1,6 +1,8 @@
 import type { OrganizationProfile, PackageComposition, PackageExtension } from "./types";
 import { composePackage } from "./applicability";
 import { customInstructionDocument, instructionDocuments, organizationDocuments } from "./documents";
+import { coreOshModule } from "./modules/core-osh";
+import "./generate/registry";
 
 /**
  * Реестр документов. Новый отраслевой модуль вызывает registerPackageModule
@@ -41,3 +43,5 @@ export function documentsFor(profile: OrganizationProfile) {
 export function buildPackage(profile: OrganizationProfile): PackageComposition {
   return composePackage(profile, documentsFor(profile));
 }
+
+registerPackageModule(coreOshModule);

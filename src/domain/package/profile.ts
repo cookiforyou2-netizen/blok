@@ -1,7 +1,7 @@
 import type { InstructionRecord } from "../types";
 import { emptyFlags, emptyProfile, factId, findFact, mergeFacts, mergeFactList, projectProfile, removeFact, winningSource } from "./facts";
 import type { FactField, FactInput, FlagKey, IndustryPreset, OrganizationProfile } from "./types";
-import { FLAG_KEYS } from "./types";
+import { FLAG_KEYS, PROFILE_SCHEMA_VERSION } from "./types";
 
 export { emptyFlags, emptyProfile, projectProfile as inferProfile };
 
@@ -10,6 +10,10 @@ const USER = "user-profile";
 function asStrings(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string");
+}
+
+function readSchemaVersion(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : PROFILE_SCHEMA_VERSION;
 }
 
 function legacyInputs(field: FactField, keys: string[], value: boolean, status: "confirmed" | "rejected"): FactInput[] {
@@ -24,12 +28,14 @@ function isFact(value: unknown): value is OrganizationProfile["facts"][number] {
 
 /** Старый профиль без фактов превращается в подтверждённые пользовательские факты и не теряет ответы «нет». */
 export function normalizeProfile(raw: unknown): OrganizationProfile {
-  const source = raw && typeof raw === "object" ? (raw as Partial<OrganizationProfile> & { facts?: unknown }) : {};
+  const source = raw && typeof raw === "object" ? (raw as Partial<OrganizationProfile> & { facts?: unknown; schemaVersion?: unknown }) : {};
   const instructionIds = asStrings(source.instructionIds);
   const presetId = typeof source.presetId === "string" ? source.presetId : null;
+  const schemaVersion = readSchemaVersion(source.schemaVersion);
   if (Array.isArray(source.facts) && source.facts.some(isFact)) {
     return projectProfile({
       ...emptyProfile(),
+      schemaVersion,
       instructionIds,
       presetId,
       facts: source.facts.filter(isFact),
@@ -69,7 +75,7 @@ export function normalizeProfile(raw: unknown): OrganizationProfile {
   if (typeof source.headcount === "number" && Number.isFinite(source.headcount)) {
     inputs.push({ field: "headcount", key: "value", value: source.headcount, source: "user", sourceId: "legacy-profile", status: "confirmed" });
   }
-  return projectProfile({ ...mergeFactList(emptyProfile(), inputs), instructionIds, presetId });
+  return projectProfile({ ...mergeFactList(emptyProfile(), inputs), schemaVersion, instructionIds, presetId });
 }
 
 function suggest(field: FactField, keys: string[], presetId: string, value: boolean = true): FactInput[] {
@@ -132,9 +138,14 @@ export function absorbAll(profile: OrganizationProfile, records: InstructionReco
   return records.reduce((next, record) => absorbInstruction(next, record), profile);
 }
 
+/** Записывает текстовый факт пользователя. Пустая строка снимает только пользовательский источник. */
+export function setTextFact(profile: OrganizationProfile, field: FactField, key: string, value: string): OrganizationProfile {
+  if (!value.trim()) return removeFact(profile, factId(field, key), { source: "user", sourceId: USER });
+  return mergeFacts(profile, [{ field, key, value: value.trim(), source: "user", sourceId: USER, status: "confirmed" }]);
+}
+
 function setText(profile: OrganizationProfile, field: FactField, value: string): OrganizationProfile {
-  if (!value.trim()) return removeFact(profile, factId(field, "value"), { source: "user", sourceId: USER });
-  return mergeFacts(profile, [{ field, key: "value", value, source: "user", sourceId: USER, status: "confirmed" }]);
+  return setTextFact(profile, field, "value", value);
 }
 
 export function patchOrganization(profile: OrganizationProfile, patch: Partial<OrganizationProfile>): OrganizationProfile {

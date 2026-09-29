@@ -1,8 +1,8 @@
 import { i as __toESM } from "../_runtime.mjs";
 import { X as require_react, w as require_jsx_runtime, x as Link } from "../_libs/@tanstack/react-router+[...].mjs";
-import { m as useApp, n as AppShell, u as buildCatalog } from "./shell-D6xK9ynY.mjs";
+import { g as useApp, n as AppShell, u as buildCatalog } from "./shell-DGAyvdZq.mjs";
 import { t as CATEGORIES } from "./types--OpmHAgC.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/catalog-B-fXskKD.js
+//#region node_modules/.nitro/vite/services/ssr/assets/catalog-B_pVlTtM.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function CatalogPage() {
