@@ -7,44 +7,61 @@ const BASIS_IOT =
 
 const FOOD = ["cook", "confectioner", "baker", "food_line", "butcher", "dishwasher"];
 const HEIGHT: Applicability = {
-  anyOf: [{ conditionIds: ["cond_height"] }, { gearIds: ["ladder"] }, { hazardIds: ["fall_height"] }, { flags: { height: true } }],
+  any: [
+    { field: "condition", in: ["cond_height"] },
+    { field: "equipment", in: ["ladder"] },
+    { field: "hazard", in: ["fall_height"] },
+    { field: "flag", in: ["height"] },
+  ],
 };
 const ELECTRICAL: Applicability = {
-  anyOf: [
-    { workIds: ["work_electrical_install", "work_electrical_maint"] },
-    { conditionIds: ["cond_live"] },
-    { gearIds: ["voltage_indicator", "insulated_tools"] },
-    { flags: { electrical: true } },
+  any: [
+    { field: "work", in: ["work_electrical_install", "work_electrical_maint"] },
+    { field: "condition", in: ["cond_live"] },
+    { field: "equipment", in: ["voltage_indicator", "insulated_tools"] },
+    { field: "flag", in: ["electrical"] },
   ],
 };
 const FOOD_RULE: Applicability = {
-  anyOf: [{ professionIds: FOOD }, { workIds: ["work_kitchen"] }, { conditionIds: ["cond_hot_kitchen"] }, { flags: { food: true } }],
+  any: [
+    { field: "profession", in: FOOD },
+    { field: "work", in: ["work_kitchen"] },
+    { field: "condition", in: ["cond_hot_kitchen"] },
+    { field: "flag", in: ["food"] },
+  ],
 };
 const TRANSPORT: Applicability = {
-  anyOf: [{ gearIds: ["car", "forklift", "self_propelled"] }, { workIds: ["work_driving"] }, { flags: { transport: true } }],
+  any: [
+    { field: "equipment", in: ["car", "forklift", "self_propelled"] },
+    { field: "work", in: ["work_driving"] },
+    { field: "flag", in: ["transport"] },
+  ],
 };
 const WAREHOUSE: Applicability = {
-  anyOf: [
-    { professionIds: ["loader", "storekeeper", "picker", "receiver", "packer", "stacker_driver", "forklift_driver"] },
-    { workIds: ["work_stacking"] },
-    { flags: { warehouse: true } },
+  any: [
+    { field: "profession", in: ["loader", "storekeeper", "picker", "receiver", "packer", "stacker_driver", "forklift_driver"] },
+    { field: "work", in: ["work_stacking"] },
+    { field: "flag", in: ["warehouse"] },
   ],
 };
 const TOOLS: Applicability = {
-  anyOf: [{ gearIds: ["angle_grinder", "drill"] }, { flags: { powerTools: true } }],
-};
-const HAZARDOUS: Applicability = {
-  anyOf: [
-    { conditionIds: ["cond_height", "cond_confined", "cond_hot_zone", "cond_explosive"] },
-    { gearIds: ["gas_cylinder", "ladder"] },
-    { workIds: ["work_gas_cutting", "work_slinging"] },
-    { flags: { hazardousWork: true } },
+  any: [
+    { field: "equipment", in: ["angle_grinder", "drill"] },
+    { field: "flag", in: ["powerTools"] },
   ],
 };
-const PPE: Applicability = { anyOf: [{ requires: ["ppe"] }, { flags: { ppe: true } }] };
-const MEDICAL: Applicability = { anyOf: [{ flags: { medical: true } }] };
-const SOUT_DONE: Applicability = { anyOf: [{ flags: { sout: true } }] };
-const HAS_PROFESSIONS: Applicability = { anyOf: [{ requires: ["professions"] }] };
+const HAZARDOUS: Applicability = {
+  any: [
+    { field: "condition", in: ["cond_height", "cond_confined", "cond_hot_zone", "cond_explosive"] },
+    { field: "equipment", in: ["gas_cylinder", "ladder"] },
+    { field: "work", in: ["work_gas_cutting", "work_slinging"] },
+    { field: "flag", in: ["hazardousWork"] },
+  ],
+};
+const PPE: Applicability = { any: [{ field: "ppe", present: true }, { field: "flag", in: ["ppe"] }] };
+const MEDICAL: Applicability = { any: [{ field: "flag", in: ["medical"] }] };
+const SOUT_DONE: Applicability = { any: [{ field: "flag", in: ["sout"] }] };
+const HAS_PROFESSIONS: Applicability = { any: [{ field: "profession", present: true }, { field: "custom_profession", present: true }] };
 
 function doc(init: {
   code: string;
@@ -58,10 +75,13 @@ function doc(init: {
   normativeBasis?: string;
   professionId?: string;
   moduleId?: string;
+  version?: string;
+  status?: DocumentModule["status"];
 }): DocumentModule {
   return {
-    version: "1.0.0",
-    status: "active",
+    id: init.code,
+    version: init.version ?? "1.0.0",
+    status: init.status ?? "active",
     dependencies: [],
     template: null,
     generator: init.generator ?? "none",
@@ -81,21 +101,21 @@ function doc(init: {
 /** Организационные документы — данные, не зашитый отраслевой пакет. */
 export function organizationDocuments(): DocumentModule[] {
   return [
-    doc({ code: "policy_suot", name: "Положение о системе управления охраной труда", category: "organization", shape: "policy", applicability: { always: true } }),
-    doc({ code: "policy_instructions", name: "Положение о порядке разработки и учёта инструкций по охране труда", category: "organization", shape: "policy", applicability: { always: true } }),
-    doc({ code: "order_responsible", name: "Приказ о возложении обязанностей по охране труда", category: "organization", shape: "order", applicability: { always: true } }),
-    doc({ code: "order_training", name: "Приказ об организации обучения по охране труда", category: "training", shape: "order", applicability: { always: true } }),
-    doc({ code: "order_sout", name: "Приказ об организации специальной оценки условий труда", category: "organization", shape: "order", applicability: { always: true } }),
+    doc({ code: "policy_suot", name: "Положение о системе управления охраной труда", category: "organization", shape: "policy", applicability: {} }),
+    doc({ code: "policy_instructions", name: "Положение о порядке разработки и учёта инструкций по охране труда", category: "organization", shape: "policy", applicability: {} }),
+    doc({ code: "order_responsible", name: "Приказ о возложении обязанностей по охране труда", category: "organization", shape: "order", applicability: {} }),
+    doc({ code: "order_training", name: "Приказ об организации обучения по охране труда", category: "training", shape: "order", applicability: {} }),
+    doc({ code: "order_sout", name: "Приказ об организации специальной оценки условий труда", category: "organization", shape: "order", applicability: {} }),
     doc({ code: "order_instructions", name: "Приказ об утверждении инструкций по охране труда", category: "instructions", shape: "order", applicability: HAS_PROFESSIONS }),
-    doc({ code: "program_intro", name: "Программа вводного инструктажа", category: "training", shape: "program", applicability: { always: true } }),
-    doc({ code: "program_first_aid", name: "Программа обучения оказанию первой помощи", category: "training", shape: "program", applicability: { always: true } }),
+    doc({ code: "program_intro", name: "Программа вводного инструктажа", category: "training", shape: "program", applicability: {} }),
+    doc({ code: "program_first_aid", name: "Программа обучения оказанию первой помощи", category: "training", shape: "program", applicability: {} }),
     doc({ code: "program_workplace", name: "Программа первичного инструктажа на рабочем месте", category: "training", shape: "program", applicability: HAS_PROFESSIONS }),
-    doc({ code: "journal_intro", name: "Журнал регистрации вводного инструктажа", category: "journals", shape: "journal", applicability: { always: true } }),
+    doc({ code: "journal_intro", name: "Журнал регистрации вводного инструктажа", category: "journals", shape: "journal", applicability: {} }),
     doc({ code: "journal_workplace", name: "Журнал регистрации инструктажа на рабочем месте", category: "journals", shape: "journal", applicability: HAS_PROFESSIONS }),
     doc({ code: "journal_issue", name: "Журнал учёта выдачи инструкций", category: "journals", shape: "journal", applicability: HAS_PROFESSIONS }),
     doc({ code: "list_instructions", name: "Перечень инструкций по охране труда", category: "lists", shape: "list", applicability: HAS_PROFESSIONS }),
     doc({ code: "list_positions", name: "Перечень профессий и должностей", category: "lists", shape: "list", applicability: HAS_PROFESSIONS }),
-    doc({ code: "risk_policy", name: "Положение об управлении профессиональными рисками", category: "risk", shape: "policy", applicability: { always: true }, commercialLevel: "PRO" }),
+    doc({ code: "risk_policy", name: "Положение об управлении профессиональными рисками", category: "risk", shape: "policy", applicability: {}, commercialLevel: "PRO" }),
     doc({ code: "risk_cards", name: "Карты оценки профессиональных рисков", category: "risk", shape: "card", applicability: HAS_PROFESSIONS, commercialLevel: "PRO" }),
     doc({ code: "order_height", name: "Приказ об организации работ на высоте", category: "hazardous", shape: "order", applicability: HEIGHT }),
     doc({ code: "program_height", name: "Программа обучения безопасным методам работ на высоте", category: "training", shape: "program", applicability: HEIGHT, commercialLevel: "PRO" }),
@@ -122,7 +142,7 @@ export function organizationDocuments(): DocumentModule[] {
       name: "Экспертная проверка пакета специалистом",
       category: "extra",
       shape: "other",
-      applicability: { always: true },
+      applicability: {},
       commercialLevel: "EXPERT",
       optional: true,
     }),
@@ -137,7 +157,7 @@ export function instructionDocuments(): DocumentModule[] {
       name: `Инструкция по охране труда: ${profession.meta.title}`,
       category: "instructions",
       shape: "instruction",
-      applicability: { anyOf: [{ professionIds: [profession.meta.id] }] },
+      applicability: { any: [{ field: "profession", in: [profession.meta.id] }] },
       commercialLevel: "FREE",
       generator: "instruction",
       normativeBasis: BASIS_IOT,
@@ -158,7 +178,7 @@ export function customInstructionDocument(title: string): DocumentModule {
     name: `Инструкция по охране труда: ${title.trim()}`,
     category: "instructions",
     shape: "instruction",
-    applicability: { always: true },
+    applicability: {},
     commercialLevel: "FREE",
     generator: "instruction",
     normativeBasis: BASIS_IOT,

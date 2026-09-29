@@ -15,6 +15,8 @@ export type DocumentCategory =
 
 export type DocumentShape = "order" | "instruction" | "policy" | "program" | "list" | "journal" | "card" | "other";
 
+export type DocumentStatus = "draft" | "active" | "deprecated";
+
 export type Tri = boolean | null;
 
 export const FLAG_KEYS = [
@@ -73,7 +75,64 @@ export const CATEGORY_ORDER: DocumentCategory[] = [
   "extra",
 ];
 
-/** Профиль копится из инструкций и мастера. Поля можно расширять, не ломая сохранённые данные. */
+/** Откуда взялся факт. Пресет — только предложение, не решение организации. */
+export type FactSourceKind = "instruction" | "user" | "preset" | "system" | "import";
+
+/** inferred — ещё не подтверждён; confirmed — принят; rejected — явно отвергнут. */
+export type FactStatus = "inferred" | "confirmed" | "rejected";
+
+export type FactField =
+  | "profession"
+  | "custom_profession"
+  | "work"
+  | "equipment"
+  | "condition"
+  | "hazard"
+  | "material"
+  | "ppe"
+  | "position"
+  | "department"
+  | "flag"
+  | "industry"
+  | "activity"
+  | "name"
+  | "inn"
+  | "headcount";
+
+export type FactValue = boolean | string | number;
+
+/** Одно наблюдение факта. У одного признака может быть несколько источников. */
+export interface FactSource {
+  source: FactSourceKind;
+  sourceId: string;
+  status: FactStatus;
+  value: FactValue;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Один признак организации.
+ * Отсутствие записи — UNKNOWN, а не false.
+ * value наружу берётся из победившего источника, сами источники не схлопываются.
+ */
+export interface ProfileFact {
+  id: string;
+  field: FactField;
+  key: string;
+  sources: FactSource[];
+}
+
+export interface FactInput {
+  field: FactField;
+  key: string;
+  value: FactValue;
+  source: FactSourceKind;
+  sourceId: string;
+  status: FactStatus;
+}
+
+/** Профиль для мастера: списки — проекция фактов, чтобы текущий экран не переписывать. */
 export interface OrganizationProfile {
   name: string;
   inn: string;
@@ -93,40 +152,37 @@ export interface OrganizationProfile {
   flags: Record<FlagKey, Tri>;
   instructionIds: string[];
   presetId: string | null;
+  facts: ProfileFact[];
 }
 
 /**
- * Списки внутри условия — ИЛИ (достаточно одного id).
- * Условия внутри anyOf — ИЛИ между собой.
- * Поля одного условия — И.
- * Признак null — «не задан», это не отказ.
+ * Условие применимости. Список `in` — ИЛИ.
+ * Несколько атомов внутри all — И, внутри any — ИЛИ, внутри none — ни одно не должно выполняться.
+ * Группы all, any и none между собой складываются через И.
  */
-export interface ApplicabilityClause {
-  professionIds?: string[];
-  workIds?: string[];
-  gearIds?: string[];
-  conditionIds?: string[];
-  hazardIds?: string[];
-  materialIds?: string[];
-  industries?: string[];
-  flags?: Partial<Record<FlagKey, boolean>>;
-  minHeadcount?: number;
-  /** Пустой список в профиле означает «ещё не спрашивали», а не «нет». */
-  requires?: Array<"professions" | "works" | "gears" | "ppe" | "hazards" | "positions">;
+export interface ApplicabilityAtom {
+  field: FactField;
+  in?: string[];
+  eq?: FactValue;
+  min?: number;
+  /** Есть подтверждающий факт поля. Пустое поле — неизвестно, а не «нет». */
+  present?: boolean;
 }
 
 export interface Applicability {
-  always?: boolean;
-  anyOf?: ApplicabilityClause[];
+  all?: ApplicabilityAtom[];
+  any?: ApplicabilityAtom[];
+  none?: ApplicabilityAtom[];
 }
 
 export interface DocumentModule {
+  id: string;
   code: string;
   name: string;
   category: DocumentCategory;
   shape: DocumentShape;
   version: string;
-  status: "active" | "draft";
+  status: DocumentStatus;
   applicability: Applicability;
   dependencies: string[];
   normativeBasis: string;
@@ -140,7 +196,7 @@ export interface DocumentModule {
   professionId?: string;
 }
 
-/** Пресет только заполняет профиль. Списка документов в нём нет. */
+/** Пресет только предлагает факты. Списка документов в нём нет. */
 export interface IndustryPreset {
   id: string;
   title: string;
@@ -156,6 +212,8 @@ export interface IndustryPreset {
 export interface PackageExtension {
   id: string;
   title: string;
+  version?: string;
+  status?: DocumentStatus;
   documents?: DocumentModule[];
 }
 
@@ -163,11 +221,21 @@ export type Match = "yes" | "no" | "unknown";
 
 export type DocResultStatus = "ready" | "clarify" | "optional" | "locked";
 
+export interface ApplicabilityDecision {
+  applicable: Match;
+  reasons: string[];
+  sources: string[];
+  missing: string[];
+}
+
 export interface PackageItem {
   document: DocumentModule;
   match: Match;
   status: DocResultStatus;
   reason: string;
+  reasons: string[];
+  sources: string[];
+  missing: string[];
 }
 
 export interface PackageComposition {

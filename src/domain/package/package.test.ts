@@ -1,17 +1,29 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildCatalog, createInstruction, deriveHazardIds, derivePpeIds, emptyDraft, ppeKey, selectionKey } from "../engine.ts";
-import type { Draft } from "../types.ts";
-import { matchApplicability } from "./applicability.ts";
-import { buildPackage, registerPackageModule } from "./registry.ts";
-import { absorbInstruction, applyPreset, emptyFlags, emptyProfile, inferProfile, normalizeProfile } from "./profile.ts";
+import type { Draft, InstructionRecord } from "../types.ts";
+import { evaluateApplicability, matchApplicability } from "./applicability.ts";
+import { emptyProfile, findFact, mergeFacts, verdictOf } from "./facts.ts";
+import { organizationDocuments } from "./documents.ts";
+import { buildPackage, listPackageExtensions, registerPackageModule } from "./registry.ts";
+import { absorbInstruction, applyPreset, normalizeProfile, userRejected } from "./profile.ts";
+import { createProfileRepository, type KeyValueStorage } from "./storage.ts";
 import { PRESETS, presetById } from "./presets.ts";
-import type { DocumentModule, OrganizationProfile } from "./types.ts";
+import type { Applicability, DocumentModule, FactInput, OrganizationProfile } from "./types.ts";
 
 const catalog = buildCatalog();
+const USER = "user-profile";
 
 function codes(profile: OrganizationProfile) {
   return buildPackage(profile).included.map((item) => item.document.code).sort();
+}
+
+function confirm(field: FactInput["field"], key: string, value: FactInput["value"] = true): FactInput {
+  return { field, key, value, source: "user", sourceId: USER, status: value === false ? "rejected" : "confirmed" };
+}
+
+function withFacts(inputs: FactInput[], base = emptyProfile()): OrganizationProfile {
+  return mergeFacts(base, inputs);
 }
 
 function welderDraft(): Draft {
@@ -31,53 +43,44 @@ function welderDraft(): Draft {
   return { ...next, ppeIds: derivePpeIds(catalog, next), ppeKey: ppeKey(next) };
 }
 
+function memory(): KeyValueStorage {
+  const data = new Map<string, string>();
+  return {
+    getItem: (key) => data.get(key) ?? null,
+    setItem: (key, value) => void data.set(key, value),
+    removeItem: (key) => void data.delete(key),
+  };
+}
+
+const WELDER_RULE: Applicability = {
+  all: [
+    { field: "profession", in: ["welder"] },
+    { field: "work", in: ["welding"] },
+  ],
+  any: [
+    { field: "equipment", in: ["angle_grinder", "drill"] },
+    { field: "hazard", in: ["hot_work"] },
+  ],
+};
+
 describe("пакет документов", () => {
-  it("две школы с одной отраслью получают разный состав только из-за профиля", () => {
+  it("две организации одной отрасли различаются только фактами профиля", () => {
     const school = presetById("school");
     assert.ok(school);
-    const full = applyPreset(emptyProfile(), school);
-    const small = inferProfile({
-      ...emptyProfile(),
-      name: "Школа без транспорта",
-      industry: "Образование",
-      activity: "Общее образование",
-      professionIds: ["cleaner_office"],
-      workIds: ["work_cleaning"],
-      gearIds: ["cleaning_agents"],
-      conditionIds: ["cond_indoor"],
-      flags: {
-        ...emptyFlags(),
-        height: false,
-        electrical: false,
-        food: false,
-        warehouse: false,
-        production: false,
-        transport: false,
-        hazardousWork: false,
-        sout: false,
-        medical: false,
-        powerTools: false,
-        ppe: true,
-      },
-    });
-    assert.equal(full.industry, "Образование");
-    assert.equal(small.industry, "Образование");
-    const fullCodes = codes(full);
-    const smallCodes = codes(small);
-    assert.notDeepEqual(fullCodes, smallCodes);
-    assert.ok(fullCodes.includes("iot_cook"));
-    assert.ok(fullCodes.includes("iot_car_driver"));
-    assert.ok(fullCodes.includes("order_height"));
-    assert.equal(smallCodes.includes("iot_cook"), false);
-    assert.equal(smallCodes.includes("iot_car_driver"), false);
-    assert.equal(smallCodes.includes("order_height"), false);
-    assert.equal(smallCodes.includes("order_food"), false);
-    assert.ok(smallCodes.includes("iot_cleaner_office"));
-    assert.equal(buildPackage(small).included.find((item) => item.document.code === "iot_cleaner_office")?.status, "ready");
-    assert.equal(buildPackage(full).included.find((item) => item.document.code === "order_height")?.status, "locked");
+    const suggested = applyPreset(emptyProfile(), school);
+    const confirmed = mergeFacts(suggested, [confirm("profession", "car_driver"), confirm("profession", "cook"), confirm("equipment", "ladder")]);
+    const rejected = mergeFacts(suggested, [confirm("profession", "car_driver", false), confirm("profession", "cook", false), confirm("flag", "food", false)]);
+    assert.equal(confirmed.industry, "Образование");
+    assert.equal(rejected.industry, "Образование");
+    assert.notDeepEqual(codes(confirmed), codes(rejected));
+    assert.ok(codes(confirmed).includes("iot_cook"));
+    assert.ok(codes(confirmed).includes("iot_car_driver"));
+    assert.equal(codes(rejected).includes("iot_cook"), false);
+    assert.equal(codes(rejected).includes("iot_car_driver"), false);
+    assert.equal(buildPackage(rejected).items.some((item) => item.document.code === "iot_car_driver"), false);
   });
 
-  it("пресет не является готовым пакетом", () => {
+  it("пресет не является готовым пакетом и не делает документ обязательным", () => {
     for (const preset of PRESETS) {
       assert.equal(Object.hasOwn(preset, "documents"), false);
       assert.equal("applicability" in preset, false);
@@ -85,20 +88,15 @@ describe("пакет документов", () => {
     const school = presetById("school");
     assert.ok(school);
     const filled = applyPreset(emptyProfile(), school);
-    const withCook = codes(filled);
-    const withoutCook = codes(
-      inferProfile({
-        ...filled,
-        professionIds: filled.professionIds.filter((id) => id !== "cook"),
-        workIds: filled.workIds.filter((id) => id !== "work_kitchen"),
-        conditionIds: filled.conditionIds.filter((id) => id !== "cond_hot_kitchen"),
-        flags: { ...filled.flags, food: false },
-      }),
-    );
-    assert.ok(withCook.includes("iot_cook"));
-    assert.equal(withoutCook.includes("iot_cook"), false);
-    assert.equal(withoutCook.includes("order_food"), false);
-    assert.deepEqual(codes(filled), codes(applyPreset(emptyProfile(), school)));
+    assert.ok(filled.professionIds.includes("car_driver"));
+    assert.equal(filled.facts.some((fact) => fact.id === "profession:car_driver" && fact.sources.some((source) => source.source === "preset" && source.status === "inferred")), true);
+    const pack = buildPackage(filled);
+    assert.equal(pack.included.some((item) => item.document.code === "iot_car_driver"), false);
+    assert.equal(pack.included.some((item) => item.document.code === "order_height"), false);
+    assert.equal(pack.clarifications.some((item) => item.document.code === "iot_car_driver"), true);
+    assert.equal(pack.clarifications.some((item) => item.document.code === "order_height"), true);
+    const withoutDriver = mergeFacts(filled, [confirm("profession", "car_driver", false)]);
+    assert.equal(buildPackage(withoutDriver).items.some((item) => item.document.code === "iot_car_driver"), false);
   });
 
   it("инструкция сварщика пополняет профиль и не спрашивается заново", () => {
@@ -108,26 +106,27 @@ describe("пакет документов", () => {
     assert.deepEqual(twice.instructionIds, [record.id]);
     assert.deepEqual(twice.professionIds, ["electrogas_welder"]);
     assert.ok(twice.gearIds.includes("angle_grinder"));
-    assert.ok(twice.gearIds.includes("welding_machine"));
     assert.ok(twice.workIds.includes("work_manual_arc"));
-    assert.ok(twice.conditionIds.includes("cond_hot_zone"));
     assert.equal(twice.name, "ООО «Ромашка»");
     assert.equal(twice.flags.powerTools, true);
     assert.equal(twice.flags.hazardousWork, true);
+    const fact = findFact(twice, "equipment", "angle_grinder");
+    assert.equal(fact?.sources.filter((source) => source.source === "instruction").length, 1);
     const pack = buildPackage(twice);
-    assert.ok(pack.included.some((item) => item.document.code === "iot_electrogas_welder" && item.document.commercialLevel === "FREE"));
+    assert.ok(pack.included.some((item) => item.document.code === "iot_electrogas_welder" && item.document.commercialLevel === "FREE" && item.status === "ready"));
     assert.equal(pack.included.some((item) => item.document.code === "iot_car_driver"), false);
   });
 
-  it("новый модуль добавляется реестром и срабатывает только по своему правилу", () => {
+  it("новый модуль добавляется реестром и несёт версию и статус", () => {
     const lift: DocumentModule = {
+      id: "auto_lift_order",
       code: "auto_lift_order",
       name: "Приказ о безопасной эксплуатации подъёмника",
       category: "hazardous",
       shape: "order",
-      version: "1.0.0",
+      version: "1.2.0",
       status: "active",
-      applicability: { anyOf: [{ gearIds: ["vehicle_lift"] }] },
+      applicability: { any: [{ field: "equipment", in: ["vehicle_lift"] }] },
       dependencies: [],
       normativeBasis: "Нормативное основание требует проверки",
       template: null,
@@ -136,32 +135,180 @@ describe("пакет документов", () => {
       optional: false,
       moduleId: "auto_service",
     };
-    registerPackageModule({ id: "auto_service", title: "Автосервис", documents: [lift] });
+    const retired: DocumentModule = { ...lift, id: "auto_lift_old", code: "auto_lift_old", status: "deprecated", version: "0.9.0" };
+    registerPackageModule({ id: "auto_service", title: "Автосервис", version: "1.2.0", status: "active", documents: [lift, retired] });
+    const stored = listPackageExtensions().find((item) => item.id === "auto_service");
+    assert.equal(stored?.version, "1.2.0");
+    assert.equal(stored?.status, "active");
     assert.equal(codes(emptyProfile()).includes("auto_lift_order"), false);
-    const withLift = inferProfile({ ...emptyProfile(), gearIds: ["vehicle_lift"] });
+    assert.equal(codes(emptyProfile()).includes("auto_lift_old"), false);
+    const withLift = withFacts([confirm("equipment", "vehicle_lift")]);
     const item = buildPackage(withLift).included.find((entry) => entry.document.code === "auto_lift_order");
     assert.ok(item);
     assert.equal(item.status, "locked");
     assert.equal(item.document.moduleId, "auto_service");
-    assert.equal(codes(withLift).includes("order_height"), false);
+    assert.equal(item.document.version, "1.2.0");
+    assert.equal(buildPackage(withLift).items.some((entry) => entry.document.code === "auto_lift_old"), false);
+    const sample = organizationDocuments()[0];
+    assert.equal(sample.id, "policy_suot");
+    assert.equal(sample.version, "1.0.0");
+    assert.equal(sample.status, "active");
   });
 
-  it("незаполненный признак просит уточнение, а явный отказ исключает документ", () => {
-    const rule = { anyOf: [{ flags: { height: true } }, { gearIds: ["ladder"] }] };
-    assert.equal(matchApplicability(emptyProfile(), rule), "unknown");
-    assert.equal(matchApplicability(inferProfile({ ...emptyProfile(), flags: { ...emptyFlags(), height: false } }), rule), "no");
-    assert.equal(matchApplicability({ ...emptyProfile(), headcount: null }, { anyOf: [{ minHeadcount: 50 }] }), "unknown");
-    assert.equal(matchApplicability({ ...emptyProfile(), headcount: 12 }, { anyOf: [{ minHeadcount: 50 }] }), "no");
-    assert.equal(matchApplicability({ ...emptyProfile(), headcount: 50 }, { anyOf: [{ minHeadcount: 50 }] }), "yes");
-  });
-
-  it("старый профиль без новых полей не теряет название и профессии", () => {
+  it("старый профиль без фактов не теряет название, профессию и явный отказ", () => {
     const profile = normalizeProfile({ name: "Школа № 1", professionIds: ["cook"], flags: { food: false } });
     assert.equal(profile.name, "Школа № 1");
     assert.deepEqual(profile.professionIds, ["cook"]);
     assert.equal(profile.flags.food, false);
     assert.equal(profile.flags.height, null);
     assert.equal(profile.flags.ppe, true);
-    assert.deepEqual(profile.instructionIds, []);
+    assert.equal(verdictOf(findFact(profile, "profession", "cook")), "yes");
+    assert.equal(userRejected(profile, "flag", "food"), true);
+  });
+
+  it("хранилище профиля заменяемо и не вшито в применимость", () => {
+    const repo = createProfileRepository(memory(), "test-profile");
+    assert.deepEqual(repo.loadProfile().facts, []);
+    const saved = repo.setFact(emptyProfile(), confirm("profession", "cook"));
+    assert.deepEqual(repo.loadProfile().professionIds, ["cook"]);
+    assert.equal(saved.professionIds[0], "cook");
+    const cleared = repo.removeFact(saved, "profession:cook");
+    assert.deepEqual(cleared.professionIds, []);
+    assert.deepEqual(repo.loadProfile().professionIds, []);
+  });
+
+  it("A. пресет предлагает водителя, явный отказ пользователя исключает документы водителя", () => {
+    const school = presetById("school");
+    assert.ok(school);
+    const profile = mergeFacts(applyPreset(emptyProfile(), school), [confirm("profession", "car_driver", false)]);
+    assert.equal(userRejected(profile, "profession", "car_driver"), true);
+    assert.equal(profile.professionIds.includes("car_driver"), false);
+    assert.equal(findFact(profile, "profession", "car_driver")?.sources.some((source) => source.source === "preset"), true);
+    const pack = buildPackage(profile);
+    assert.equal(pack.items.some((item) => item.document.code === "iot_car_driver"), false);
+    assert.equal(pack.included.some((item) => item.document.code === "iot_car_driver"), false);
+    assert.equal(pack.clarifications.some((item) => item.document.code === "iot_car_driver"), false);
+  });
+
+  it("B. УШМ из инструкции сварщика доказывает применимость документа по электроинструменту", () => {
+    const record = createInstruction(catalog, welderDraft());
+    const profile = absorbInstruction(emptyProfile(), record);
+    const fact = findFact(profile, "equipment", "angle_grinder");
+    assert.equal(verdictOf(fact), "yes");
+    assert.equal(fact?.sources[0]?.source, "instruction");
+    assert.equal(fact?.sources[0]?.sourceId, record.id);
+    assert.equal(fact?.sources[0]?.status, "inferred");
+    const item = buildPackage(profile).included.find((entry) => entry.document.code === "order_tools");
+    assert.ok(item);
+    assert.equal(item.match, "yes");
+    assert.match(item.reason, /angle_grinder/);
+    assert.ok(item.sources.includes(record.id));
+    assert.match(item.reason, /Документ включён/);
+  });
+
+  it("C. явный отказ пользователя важнее факта из инструкции", () => {
+    const record = createInstruction(catalog, welderDraft());
+    const learned = absorbInstruction(emptyProfile(), record);
+    const profile = mergeFacts(learned, [confirm("equipment", "angle_grinder", false)]);
+    const fact = findFact(profile, "equipment", "angle_grinder");
+    assert.equal(verdictOf(fact), "no");
+    assert.equal(fact?.sources.some((source) => source.source === "instruction" && source.sourceId === record.id), true);
+    assert.equal(fact?.sources.some((source) => source.source === "user" && source.status === "rejected"), true);
+    assert.equal(profile.gearIds.includes("angle_grinder"), false);
+    assert.equal(profile.flags.powerTools, null);
+    const onlyGrinder: Applicability = { any: [{ field: "equipment", in: ["angle_grinder"] }] };
+    const decision = evaluateApplicability(profile, onlyGrinder);
+    assert.equal(decision.applicable, "no");
+    assert.equal(buildPackage(profile).included.some((item) => item.document.code === "order_tools"), false);
+  });
+
+  it("D. неизвестная высота — это UNKNOWN и статус «нужно уточнить», а не отказ", () => {
+    const decision = evaluateApplicability(emptyProfile(), { any: [{ field: "flag", in: ["height"] }, { field: "equipment", in: ["ladder"] }] });
+    assert.equal(decision.applicable, "unknown");
+    assert.ok(decision.missing.includes("flag:height"));
+    assert.ok(decision.missing.includes("equipment:ladder"));
+    const item = buildPackage(emptyProfile()).clarifications.find((entry) => entry.document.code === "order_height");
+    assert.ok(item);
+    assert.equal(item.match, "unknown");
+    assert.equal(item.status, "clarify");
+    assert.match(item.reason, /Нужно уточнить/);
+    const refused = mergeFacts(emptyProfile(), [
+      confirm("flag", "height", false),
+      confirm("equipment", "ladder", false),
+      confirm("condition", "cond_height", false),
+      confirm("hazard", "fall_height", false),
+    ]);
+    assert.equal(buildPackage(refused).items.some((entry) => entry.document.code === "order_height"), false);
+    assert.equal(matchApplicability(emptyProfile(), { any: [{ field: "headcount", min: 50 }] }), "unknown");
+    assert.equal(matchApplicability(withFacts([confirm("headcount", "value", 12)]), { any: [{ field: "headcount", min: 50 }] }), "no");
+    assert.equal(matchApplicability(withFacts([confirm("headcount", "value", 50)]), { any: [{ field: "headcount", min: 50 }] }), "yes");
+  });
+
+  it("E. ALL и ANY: сварщик и сварка и (УШМ или дрель)", () => {
+    const ready = withFacts([
+      confirm("profession", "welder"),
+      confirm("work", "welding"),
+      confirm("equipment", "angle_grinder"),
+    ]);
+    const matched = evaluateApplicability(ready, WELDER_RULE);
+    assert.equal(matched.applicable, "yes");
+    assert.ok(matched.reasons.some((reason) => reason.includes("welder")));
+    assert.ok(matched.reasons.some((reason) => reason.includes("welding")));
+    assert.ok(matched.reasons.some((reason) => reason.includes("angle_grinder")));
+
+    const drillOnly = withFacts([
+      confirm("profession", "welder"),
+      confirm("work", "welding"),
+      confirm("equipment", "drill", false),
+      confirm("equipment", "angle_grinder", false),
+    ]);
+    const viaDrill = withFacts([
+      confirm("profession", "welder"),
+      confirm("work", "welding"),
+      confirm("equipment", "drill"),
+      confirm("equipment", "angle_grinder", false),
+    ]);
+    assert.equal(evaluateApplicability(viaDrill, WELDER_RULE).applicable, "yes");
+
+    const missingTool = withFacts([confirm("profession", "welder"), confirm("work", "welding")]);
+    const unknown = evaluateApplicability(missingTool, WELDER_RULE);
+    assert.equal(unknown.applicable, "unknown");
+    assert.ok(unknown.missing.includes("equipment:angle_grinder"));
+    assert.ok(unknown.missing.includes("equipment:drill"));
+
+    const notWelder = withFacts([
+      confirm("profession", "welder", false),
+      confirm("work", "welding"),
+      confirm("equipment", "angle_grinder"),
+    ]);
+    assert.equal(evaluateApplicability(notWelder, WELDER_RULE).applicable, "no");
+
+    const blocked = evaluateApplicability(ready, {
+      ...WELDER_RULE,
+      none: [{ field: "flag", in: ["activity_not_performed"] }],
+    });
+    assert.equal(blocked.applicable, "unknown");
+    const closed = mergeFacts(ready, [confirm("flag", "activity_not_performed")]);
+    assert.equal(evaluateApplicability(closed, { ...WELDER_RULE, none: [{ field: "flag", in: ["activity_not_performed"] }] }).applicable, "no");
+    const allowed = mergeFacts(ready, [confirm("flag", "activity_not_performed", false)]);
+    assert.equal(evaluateApplicability(allowed, { ...WELDER_RULE, none: [{ field: "flag", in: ["activity_not_performed"] }] }).applicable, "yes");
+    assert.equal(evaluateApplicability(drillOnly, { any: [{ field: "equipment", in: ["angle_grinder"] }] }).applicable, "no");
+  });
+
+  it("F. один и тот же инструмент из двух инструкций не дублируется, источники сохраняются", () => {
+    const first = createInstruction(catalog, welderDraft());
+    const second: InstructionRecord = {
+      ...first,
+      id: `${first.id}-fitter`,
+      professionId: "repair_fitter",
+      professionTitle: "Слесарь-ремонтник",
+    };
+    const profile = absorbInstruction(absorbInstruction(emptyProfile(), first), second);
+    const matches = profile.facts.filter((fact) => fact.id === "equipment:angle_grinder");
+    assert.equal(matches.length, 1);
+    const sources = matches[0]?.sources.filter((source) => source.source === "instruction") ?? [];
+    assert.deepEqual(sources.map((source) => source.sourceId).sort(), [first.id, second.id].sort());
+    assert.equal(verdictOf(matches[0]), "yes");
+    assert.equal(profile.gearIds.filter((id) => id === "angle_grinder").length, 1);
   });
 });

@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { applyUpdateStep, buildCatalog, blankCustom, blankHazard, blankSout, createInstruction, deriveHazardIds, derivePpeIds, emptyDraft, emptyOverrides, ppeKey, selectionKey, type Overrides, type UpdateStepResult } from "./engine";
-import { absorbAll, absorbInstruction, applyPreset, emptyProfile, inferProfile, normalizeProfile } from "./package/profile";
+import { absorbAll, absorbInstruction, addCustomProfession, applyPreset, emptyProfile, normalizeProfile, patchOrganization, removeCustomProfession, setFlagFact, toggleListedFact } from "./package/profile";
 import { presetById } from "./package/presets";
+import { profileRepository } from "./package/storage";
 import type { FlagKey, OrganizationProfile } from "./package/types";
 import type { Draft, InstructionRecord, Profession, SoutRow } from "./types";
 
@@ -155,6 +156,7 @@ export const useApp = create<AppState>()(
         if (draft.ppeKey !== pk) draft = { ...draft, ppeIds: derivePpeIds(catalog, draft), ppeKey: pk };
         const record = createInstruction(catalog, draft);
         const profile = absorbInstruction(state.profile ?? emptyProfile(), record);
+        profileRepository.saveProfile(profile);
         set({ draft, instructions: [record, ...state.instructions].slice(0, 40), profile });
         return record;
       },
@@ -205,51 +207,42 @@ export const useApp = create<AppState>()(
       },
       setPackageStep: (packageStep) => set({ packageStep }),
       patchProfile: (patch) => {
-        const current = get().profile;
-        set({
-          profile: inferProfile({
-            ...current,
-            ...patch,
-            flags: { ...current.flags, ...(patch.flags ?? {}) },
-          }),
-        });
+        const profile = patchOrganization(get().profile, patch);
+        profileRepository.saveProfile(profile);
+        set({ profile });
       },
       toggleProfile: (field, id) => {
-        const current = get().profile[field];
-        const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-        set({ profile: inferProfile({ ...get().profile, [field]: next }) });
+        const profile = toggleListedFact(get().profile, field, id);
+        profileRepository.saveProfile(profile);
+        set({ profile });
       },
       setProfileFlag: (key, value) => {
-        const current = get().profile;
-        set({ profile: { ...current, flags: { ...current.flags, [key]: value } } });
+        const profile = setFlagFact(get().profile, key, value);
+        profileRepository.saveProfile(profile);
+        set({ profile });
       },
       applyIndustryPreset: (id) => {
         const preset = presetById(id);
         if (!preset) return;
-        set({ profile: applyPreset(get().profile, preset) });
+        const profile = applyPreset(get().profile, preset);
+        profileRepository.saveProfile(profile);
+        set({ profile });
       },
       addProfileCustomProfession: (title) => {
-        const name = title.trim();
-        if (name.length < 2 || get().profile.customProfessions.includes(name)) return;
-        const current = get().profile;
-        set({
-          profile: inferProfile({
-            ...current,
-            customProfessions: [...current.customProfessions, name],
-            positions: current.positions.includes(name) ? current.positions : [...current.positions, name],
-          }),
-        });
+        const profile = addCustomProfession(get().profile, title);
+        profileRepository.saveProfile(profile);
+        set({ profile });
       },
       removeProfileCustomProfession: (title) => {
-        const current = get().profile;
-        set({
-          profile: inferProfile({
-            ...current,
-            customProfessions: current.customProfessions.filter((item) => item !== title),
-          }),
-        });
+        const profile = removeCustomProfession(get().profile, title);
+        profileRepository.saveProfile(profile);
+        set({ profile });
       },
-      syncProfile: () => set({ profile: absorbAll(normalizeProfile(get().profile), get().instructions) }),
+      syncProfile: () => {
+        const profile = absorbAll(normalizeProfile(get().profile), get().instructions);
+        profileRepository.saveProfile(profile);
+        set({ profile });
+      },
     }),
     {
       name: "ychy-iot-v1",
