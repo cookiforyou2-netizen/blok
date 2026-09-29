@@ -215,6 +215,9 @@ export interface PackageExtension {
   version?: string;
   status?: DocumentStatus;
   documents?: DocumentModule[];
+  /** Предлагаемые факты. В профиль сами не записываются: ядро только хранит регистрацию. */
+  facts?: FactInput[];
+  dependencies?: string[];
 }
 
 export type Match = "yes" | "no" | "unknown";

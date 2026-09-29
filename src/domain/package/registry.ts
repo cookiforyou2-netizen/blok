@@ -22,6 +22,8 @@ export function registerPackageModule(extension: PackageExtension) {
     version: extension.version ?? "1.0.0",
     status: extension.status ?? "active",
     documents,
+    facts: extension.facts ?? [],
+    dependencies: extension.dependencies ?? [],
   });
 }
 

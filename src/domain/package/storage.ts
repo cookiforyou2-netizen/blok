@@ -1,18 +1,21 @@
 import { emptyProfile, mergeFacts, removeFact } from "./facts";
 import { normalizeProfile } from "./profile";
-import type { FactInput, FactSource, OrganizationProfile } from "./types";
+import type { FactInput, FactSource, OrganizationProfile, ProfileFact } from "./types";
 
 /**
- * Бизнес-логика профиля говорит только с этим контрактом.
- * Сейчас данные лежат в браузере. Позже ту же границу закроет серверное хранилище.
+ * Граница хранения профиля. Package Engine и мастер знают только эти методы.
+ * Сейчас пишет браузер. ServerProfileStorage позже реализует тот же контракт.
  */
-export interface ProfileRepository {
+export interface ProfileStorage {
   loadProfile(): OrganizationProfile;
   saveProfile(profile: OrganizationProfile): void;
-  mergeFacts(profile: OrganizationProfile, facts: FactInput[]): OrganizationProfile;
   setFact(profile: OrganizationProfile, fact: FactInput): OrganizationProfile;
+  mergeFacts(profile: OrganizationProfile, facts: FactInput[]): OrganizationProfile;
+  getFact(factId: string, profile?: OrganizationProfile): ProfileFact | undefined;
   removeFact(profile: OrganizationProfile, factId: string, source?: { source: FactSource["source"]; sourceId: string }): OrganizationProfile;
 }
+
+export type ProfileRepository = ProfileStorage;
 
 export interface KeyValueStorage {
   getItem(key: string): string | null;
@@ -20,34 +23,52 @@ export interface KeyValueStorage {
   removeItem(key: string): void;
 }
 
-export function createProfileRepository(storage: KeyValueStorage, storageKey = "ychy-iot-profile-v1"): ProfileRepository {
-  return {
-    loadProfile() {
-      try {
-        const raw = storage.getItem(storageKey);
-        if (!raw) return emptyProfile();
-        return normalizeProfile(JSON.parse(raw));
-      } catch {
-        return emptyProfile();
-      }
-    },
-    saveProfile(profile) {
-      storage.setItem(storageKey, JSON.stringify(profile));
-    },
-    mergeFacts(profile, facts) {
-      const next = mergeFacts(profile, facts);
-      this.saveProfile(next);
-      return next;
-    },
-    setFact(profile, fact) {
-      return this.mergeFacts(profile, [fact]);
-    },
-    removeFact(profile, factId, source) {
-      const next = removeFact(profile, factId, source);
-      this.saveProfile(next);
-      return next;
-    },
-  };
+export class BrowserProfileStorage implements ProfileStorage {
+  private readonly bucket: KeyValueStorage;
+  private readonly storageKey: string;
+
+  constructor(bucket?: KeyValueStorage, storageKey = "ychy-iot-profile-v1") {
+    this.bucket = bucket ?? browserStorage();
+    this.storageKey = storageKey;
+  }
+
+  loadProfile(): OrganizationProfile {
+    try {
+      const raw = this.bucket.getItem(this.storageKey);
+      if (!raw) return emptyProfile();
+      return normalizeProfile(JSON.parse(raw));
+    } catch {
+      return emptyProfile();
+    }
+  }
+
+  saveProfile(profile: OrganizationProfile): void {
+    this.bucket.setItem(this.storageKey, JSON.stringify(profile));
+  }
+
+  mergeFacts(profile: OrganizationProfile, facts: FactInput[]): OrganizationProfile {
+    const next = mergeFacts(profile, facts);
+    this.saveProfile(next);
+    return next;
+  }
+
+  setFact(profile: OrganizationProfile, fact: FactInput): OrganizationProfile {
+    return this.mergeFacts(profile, [fact]);
+  }
+
+  getFact(factId: string, profile?: OrganizationProfile): ProfileFact | undefined {
+    return (profile ?? this.loadProfile()).facts.find((fact) => fact.id === factId);
+  }
+
+  removeFact(profile: OrganizationProfile, factId: string, source?: { source: FactSource["source"]; sourceId: string }): OrganizationProfile {
+    const next = removeFact(profile, factId, source);
+    this.saveProfile(next);
+    return next;
+  }
+}
+
+export function createProfileRepository(storage: KeyValueStorage, storageKey = "ychy-iot-profile-v1"): ProfileStorage {
+  return new BrowserProfileStorage(storage, storageKey);
 }
 
 function memoryStorage(): KeyValueStorage {
@@ -69,4 +90,4 @@ function browserStorage(): KeyValueStorage {
 }
 
 /** Текущая реализация. Мастер и applicability к localStorage не обращаются. */
-export const profileRepository: ProfileRepository = createProfileRepository(browserStorage());
+export const profileRepository: ProfileStorage = new BrowserProfileStorage();

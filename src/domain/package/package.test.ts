@@ -172,9 +172,11 @@ describe("пакет документов", () => {
     const saved = repo.setFact(emptyProfile(), confirm("profession", "cook"));
     assert.deepEqual(repo.loadProfile().professionIds, ["cook"]);
     assert.equal(saved.professionIds[0], "cook");
+    assert.equal(repo.getFact("profession:cook")?.key, "cook");
+    assert.equal(repo.getFact("profession:cook", saved)?.sources[0]?.source, "user");
     const cleared = repo.removeFact(saved, "profession:cook");
     assert.deepEqual(cleared.professionIds, []);
-    assert.deepEqual(repo.loadProfile().professionIds, []);
+    assert.equal(repo.getFact("profession:cook"), undefined);
   });
 
   it("A. пресет предлагает водителя, явный отказ пользователя исключает документы водителя", () => {
@@ -310,5 +312,24 @@ describe("пакет документов", () => {
     assert.deepEqual(sources.map((source) => source.sourceId).sort(), [first.id, second.id].sort());
     assert.equal(verdictOf(matches[0]), "yes");
     assert.equal(profile.gearIds.filter((id) => id === "angle_grinder").length, 1);
+  });
+
+  it("TEST 6. NONE: сварка есть, и её явно не исключали", () => {
+    const rule: Applicability = {
+      all: [{ field: "work", in: ["welding"] }],
+      none: [{ field: "work", in: ["welding_explicitly_excluded"] }],
+    };
+    const welding = withFacts([confirm("work", "welding")]);
+    const unknown = evaluateApplicability(welding, rule);
+    assert.equal(unknown.applicable, "unknown");
+    assert.ok(unknown.missing.includes("work:welding_explicitly_excluded"));
+
+    const allowed = mergeFacts(welding, [confirm("work", "welding_explicitly_excluded", false)]);
+    assert.equal(evaluateApplicability(allowed, rule).applicable, "yes");
+
+    const blocked = mergeFacts(welding, [confirm("work", "welding_explicitly_excluded")]);
+    const decision = evaluateApplicability(blocked, rule);
+    assert.equal(decision.applicable, "no");
+    assert.match(decision.reasons.join(" "), /welding_explicitly_excluded/);
   });
 });
