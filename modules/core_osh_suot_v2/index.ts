@@ -5,7 +5,7 @@
  */
 
 export const MODULE_ID = "core_osh_suot_v2";
-export const MODULE_VERSION = "2.1.0";
+export const MODULE_VERSION = "2.2.0";
 
 export const DOCUMENT_TITLE = "Положение о системе управления охраной труда";
 
@@ -18,6 +18,8 @@ export const PLACEHOLDERS = [
   "responsiblePerson",
   "responsiblePosition",
   "approvalDate",
+  "approvalOrderDate",
+  "approvalOrderNumber",
   "city",
 ] as const;
 
@@ -89,8 +91,8 @@ export const NORMATIVE_BASIS: NormativeBasisItem[] = [
   },
   {
     act: "Постановление Правительства Российской Федерации от 24.12.2021 № 2464",
-    point: "Правила в редакции постановления от 30.06.2026 № 805, действуют до 01.09.2032; пункт 14",
-    confirms: "Повторный инструктаж не реже одного раза в 6 месяцев. Для работника, впервые начавшего трудовую деятельность и допущенного к работам повышенной опасности, в первый год — не реже одного раза в 3 месяца.",
+    point: "Правила в действующей редакции после постановления Правительства Российской Федерации от 30.06.2026 № 805; пункт 14; документ действует до 01.09.2032",
+    confirms: "Общий повторный инструктаж — не реже одного раза в 6 месяцев. Для работников, впервые начавших трудовую деятельность и допущенных к работам повышенной опасности, — не реже одного раза в 3 месяца в течение первого года работы.",
     status: "verified",
   },
   {
@@ -232,8 +234,8 @@ const SECTIONS: PolicySection[] = [
     id: "general",
     title: "1. Общие положения",
     paragraphs: [
-      "1.1. {{organization.name}} (далее — Организация, {{organization.shortName}}) в лице {{organization.directorPosition}} {{organization.director}} (далее — Руководитель организации) утверждает настоящее Положение о системе управления охраной труда.",
-      "1.2. Положение действует в отношении работ по адресу: {{city}}, {{organization.address}}, и в любом другом месте, где работник выполняет поручение Организации. Учёт процедур ведёт {{responsiblePosition}} {{responsiblePerson}} (далее — Ответственный).",
+      "1.1. Работодатель — {{organization.name}}. Краткое наименование — {{organization.shortName}}. Далее — Организация. Руководитель организации — {{organization.directorPosition}} {{organization.director}}.",
+      "1.2. Место издания Положения — {{city}}. Положение действует в отношении работ по адресу: {{organization.address}}, и в любом другом месте, где работник выполняет поручение Организации. Ответственный за функционирование СУОТ — {{responsiblePosition}} {{responsiblePerson}}. Далее — Ответственный. Учёт процедур ведёт Ответственный.",
       "1.3. Положение — локальный нормативный акт. Его исполняют Руководитель организации, непосредственные руководители, Ответственный, работники и лица, допущенные на территорию для работы. Устное постоянное послабление против этого текста не применяется.",
       "1.4. Система управления охраной труда — связанные между собой политика, цели, распределение обязанностей и процедуры, которыми Организация достигает этих целей. Работодатель создаёт систему и поддерживает её работу.",
       "1.5. Положение принято в соответствии со статьёй 217 Трудового кодекса Российской Федерации и с учётом Примерного положения о системе управления охраной труда, утверждённого приказом Минтруда России от 29.10.2021 № 776н. Обязанности работодателя, работника и порядок отдельных процедур берутся из Трудового кодекса, постановления Правительства Российской Федерации от 24.12.2021 № 2464, приказа Минтруда России от 29.10.2021 № 766н, приказа Минздрава России от 28.01.2021 № 29н и Федерального закона от 28.12.2013 № 426-ФЗ.",
@@ -482,11 +484,11 @@ const SECTIONS: PolicySection[] = [
     id: "final",
     title: "20. Заключительные положения",
     paragraphs: [
-      "20.1. Положение вступает в силу с {{approvalDate}}, если в приказе об утверждении не названа более поздняя дата. С этой даты допуск к работе идёт по пункту 3.2.",
+      "20.1. Положение утверждено приказом {{organization.shortName}} от {{approvalOrderDate}} № {{approvalOrderNumber}} и вступает в силу с {{approvalDate}}. Если в этом приказе названа другая дата вступления в силу, применяют дату из приказа. С даты вступления в силу допуск к работе идёт по пункту 3.2.",
       "20.2. Положение действует до утверждения нового текста. Неприменение отдельного пункта по пункту 1.6 остальные пункты не отменяет.",
       "20.3. Текст пересматривают не реже одного раза в год по докладу Ответственного, а также после несчастного случая со смертельным исходом и после смены адреса деятельности. Вне очередного пересмотра его меняют по пункту 18.6.",
-      "20.4. Контроль исполнения Руководитель организации оставляет за собой. Текущий учёт поручается Ответственному, {{responsiblePosition}} {{responsiblePerson}}.",
-      "20.5. Положение утверждено для {{organization.name}} ({{organization.shortName}}) и действует по адресу {{city}}, {{organization.address}}. Другая организация применяет его только если утвердит свой текст.",
+      "20.4. Контроль исполнения оставляет за собой Руководитель организации. Ответственный за функционирование СУОТ — {{responsiblePosition}} {{responsiblePerson}}. Текущий учёт ведёт Ответственный.",
+      "20.5. Положение действует у работодателя — {{organization.name}}. Краткое наименование — {{organization.shortName}}. Адрес территории работ — {{organization.address}}. Место издания — {{city}}. Иная организация применяет этот текст только после утверждения своим приказом.",
       "20.6. Вместе с Положением применяют Трудовой кодекс Российской Федерации (статьи 209, 214, 214.2, 215, 216, 217, 218, 219, 220, 221, 223, 224, 225, 226, 227, 228, 229, 229.1 и 372), постановление Правительства Российской Федерации от 24.12.2021 № 2464, приказ Минтруда России от 29.10.2021 № 776н, приказ Минтруда России от 29.10.2021 № 766н, приказ Минздрава России от 28.01.2021 № 29н и Федеральный закон от 28.12.2013 № 426-ФЗ.",
     ],
   },
@@ -500,17 +502,70 @@ export function policySections(): PolicySection[] {
   return SECTIONS.map((section) => ({ ...section, paragraphs: [...section.paragraphs] }));
 }
 
-export function headerLines(): string[] {
-  return [
-    "{{organization.name}}",
-    "{{organization.shortName}}",
-    "{{city}}, {{organization.address}}",
-    "УТВЕРЖДАЮ",
-    "{{organization.directorPosition}}",
-    "{{organization.director}}",
-    "{{approvalDate}}",
-    DOCUMENT_TITLE,
-  ];
+export function namesAreSame(left?: string, right?: string): boolean {
+  const normalize = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/ё/g, "е")
+      .replace(/[«»“”„"]/g, "")
+      .replace(/\s+/g, " ");
+  if (!left?.trim() || !right?.trim()) return false;
+  return normalize(left) === normalize(right);
+}
+
+/** Город уже записан в адресе отдельным словом, а не как часть другого слова. */
+export function addressContainsCity(address?: string, city?: string): boolean {
+  if (!address?.trim() || !city?.trim()) return false;
+  const cityWord = city
+    .trim()
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/^г(?:ор\.|ор\.|ород)?\.?\s+/, "")
+    .replace(/[«»“”„"]/g, "")
+    .replace(/\s+/g, " ");
+  if (!cityWord) return false;
+  const hay = address.trim().toLowerCase().replace(/ё/g, "е");
+  const escaped = cityWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^a-zа-я])${escaped}(?:[^a-zа-я]|$)`, "i").test(hay);
+}
+
+function escapeRequisite(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Правило реквизитов. Одинаковые полное и краткое названия не печатают вторым разом.
+ * Город не приписывают к адресу, если адрес его уже содержит.
+ */
+export function applyRequisiteRules(text: string, values: Partial<Record<Placeholder, string>> = {}): string {
+  let out = text;
+  const name = values["organization.name"]?.trim() ?? "";
+  const shortName = values["organization.shortName"]?.trim() ?? "";
+  const city = values["city"]?.trim() ?? "";
+  const address = values["organization.address"]?.trim() ?? "";
+  if (name && shortName && namesAreSame(name, shortName)) {
+    const short = escapeRequisite(shortName);
+    const full = escapeRequisite(name);
+    out = out.replace(new RegExp(`Краткое наименование\\s*—\\s*${short}\\.?\\s*`, "g"), "");
+    out = out.replace(new RegExp(`${full}\\s*\\(\\s*${short}\\s*\\)`, "g"), name);
+    out = out.replace(new RegExp(`${full}\\s*\\(\\s*далее\\s*—\\s*Организация\\s*,\\s*${short}\\s*\\)`, "g"), `${name} (далее — Организация)`);
+    out = out.replace(new RegExp(`${full}\\s*,\\s*${short}\\b`, "g"), name);
+  }
+  if (city && address && addressContainsCity(address, city)) {
+    out = out.replaceAll(`${city}, ${address}`, address);
+    out = out.replaceAll(`${city}, ${address.replace(/^[,\s]+/, "")}`, address);
+  }
+  return out.replace(/[ ]{2,}/g, " ").replace(/\s+\./g, ".").trim();
+}
+
+export function headerLines(values: Partial<Record<Placeholder, string>> = {}): string[] {
+  const lines = ["{{organization.name}}"];
+  if (!namesAreSame(values["organization.name"], values["organization.shortName"])) {
+    lines.push("{{organization.shortName}}");
+  }
+  lines.push("{{city}}", "УТВЕРЖДЕНО", "приказом {{organization.shortName}}", "от {{approvalOrderDate}} № {{approvalOrderNumber}}", DOCUMENT_TITLE);
+  return lines;
 }
 
 export function fillPlaceholders(text: string, values: Partial<Record<Placeholder, string>>): string {
@@ -522,14 +577,18 @@ export function fillPlaceholders(text: string, values: Partial<Record<Placeholde
 
 /** Текст для клиента. Записи со статусом needs_review не добавляются. */
 export function renderPolicy(values: Partial<Record<Placeholder, string>> = {}): Array<{ kind: "heading" | "body"; text: string }> {
-  const blocks: Array<{ kind: "heading" | "body"; text: string }> = headerLines().map((text) => ({
-    kind: text === DOCUMENT_TITLE ? "heading" : "body",
-    text: fillPlaceholders(text, values),
-  }));
+  const blocks: Array<{ kind: "heading" | "body"; text: string }> = [];
+  let previous = "";
+  for (const line of headerLines(values)) {
+    const text = applyRequisiteRules(fillPlaceholders(line, values), values);
+    if (text === previous && text !== DOCUMENT_TITLE) continue;
+    previous = text;
+    blocks.push({ kind: text === DOCUMENT_TITLE ? "heading" : "body", text });
+  }
   for (const section of SECTIONS) {
     blocks.push({ kind: "heading", text: section.title });
     for (const paragraph of section.paragraphs) {
-      blocks.push({ kind: "body", text: fillPlaceholders(paragraph, values) });
+      blocks.push({ kind: "body", text: applyRequisiteRules(fillPlaceholders(paragraph, values), values) });
     }
   }
   return blocks;
@@ -545,6 +604,17 @@ export function moduleContract() {
     sections: SECTIONS.map((section) => ({ id: section.id, title: section.title })),
     normative_basis: NORMATIVE_BASIS.map((item) => ({ ...item })),
     placeholders: [...PLACEHOLDERS],
+    approval: {
+      orderDate: "approvalOrderDate",
+      orderNumber: "approvalOrderNumber",
+      effectiveDate: "approvalDate",
+    },
+    rendererRules: [
+      "Одинаковые organization.name и organization.shortName не печатать рядом и не повторять строку «Краткое наименование».",
+      "Город в шапке — место издания. Полный адрес печатать отдельно. Не склеивать city и address, если адрес уже содержит город.",
+      "ФИО и должности подставлять как введены, в именительном падеже после тире. Не склонять.",
+      "Гриф: УТВЕРЖДЕНО приказом shortName от approvalOrderDate № approvalOrderNumber. Текст приказа модуль не содержит.",
+    ],
     replaces: {
       templateId: "tpl_osh_policy_suot",
       generatorId: "osh_policy_suot",
