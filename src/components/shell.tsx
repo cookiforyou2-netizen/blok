@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "@/domain/store";
+import { startProfileSync } from "@/domain/package/profile-sync";
 
 const LINKS = [
   { to: "/", label: "Обзор" },
@@ -14,9 +15,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
   useEffect(() => {
+    let alive = true;
+    let stop = () => {};
     void Promise.resolve(useApp.persist.rehydrate()).then(() => {
+      if (!alive) return;
       useApp.getState().syncProfile();
+      stop = startProfileSync();
     });
+    return () => {
+      alive = false;
+      stop();
+    };
   }, []);
 
   return (
@@ -26,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link to="/" className="flex min-w-0 items-center gap-3">
             <img src="/brand/ychy-logo.jpg" alt="Логотип ychy-pro.ru" className="size-11 rounded-full object-cover" />
             <span className="min-w-0">
-              <span className="block truncate text-sm font-extrabold tracking-tight text-ink">Конструктор ИОТ</span>
+              <span className="block truncate text-sm font-extrabold tracking-tight text-ink">Конструктор ИОТ <span className="text-primary">BETA</span></span>
               <span className="block text-xs font-semibold text-primary">ychy-pro.ru</span>
             </span>
           </Link>

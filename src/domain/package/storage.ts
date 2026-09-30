@@ -4,7 +4,7 @@ import type { FactInput, FactSource, OrganizationProfile, ProfileFact } from "./
 
 /**
  * Граница хранения профиля. Package Engine и мастер знают только эти методы.
- * Сейчас пишет браузер. ServerProfileStorage позже реализует тот же контракт.
+ * Браузер — запасной вариант. Диск: ServerProfileStorage в server-storage.ts.
  */
 export interface ProfileStorage {
   loadProfile(): OrganizationProfile;

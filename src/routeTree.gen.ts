@@ -14,6 +14,8 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as PackageRouteImport } from './routes/package'
 import { Route as WizardRouteImport } from './routes/wizard'
+import { Route as ApiExportRouteImport } from './routes/api/export'
+import { Route as ApiProfileRouteImport } from './routes/api/profile'
 import { Route as InstructionIdRouteImport } from './routes/instruction.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +43,16 @@ const WizardRoute = WizardRouteImport.update({
   path: '/wizard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExportRoute = ApiExportRouteImport.update({
+  id: '/api/export',
+  path: '/api/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProfileRoute = ApiProfileRouteImport.update({
+  id: '/api/profile',
+  path: '/api/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InstructionIdRoute = InstructionIdRouteImport.update({
   id: '/instruction/$id',
   path: '/instruction/$id',
@@ -53,6 +65,8 @@ export interface FileRoutesByFullPath {
   '/catalog': typeof CatalogRoute
   '/package': typeof PackageRoute
   '/wizard': typeof WizardRoute
+  '/api/export': typeof ApiExportRoute
+  '/api/profile': typeof ApiProfileRoute
   '/instruction/$id': typeof InstructionIdRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +75,8 @@ export interface FileRoutesByTo {
   '/catalog': typeof CatalogRoute
   '/package': typeof PackageRoute
   '/wizard': typeof WizardRoute
+  '/api/export': typeof ApiExportRoute
+  '/api/profile': typeof ApiProfileRoute
   '/instruction/$id': typeof InstructionIdRoute
 }
 export interface FileRoutesById {
@@ -70,14 +86,31 @@ export interface FileRoutesById {
   '/catalog': typeof CatalogRoute
   '/package': typeof PackageRoute
   '/wizard': typeof WizardRoute
+  '/api/export': typeof ApiExportRoute
+  '/api/profile': typeof ApiProfileRoute
   '/instruction/$id': typeof InstructionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/catalog' | '/package' | '/wizard' | '/instruction/$id'
+    | '/'
+    | '/admin'
+    | '/catalog'
+    | '/package'
+    | '/wizard'
+    | '/api/export'
+    | '/api/profile'
+    | '/instruction/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/catalog' | '/package' | '/wizard' | '/instruction/$id'
+  to:
+    | '/'
+    | '/admin'
+    | '/catalog'
+    | '/package'
+    | '/wizard'
+    | '/api/export'
+    | '/api/profile'
+    | '/instruction/$id'
   id:
     | '__root__'
     | '/'
@@ -85,6 +118,8 @@ export interface FileRouteTypes {
     | '/catalog'
     | '/package'
     | '/wizard'
+    | '/api/export'
+    | '/api/profile'
     | '/instruction/$id'
   fileRoutesById: FileRoutesById
 }
@@ -94,6 +129,8 @@ export interface RootRouteChildren {
   CatalogRoute: typeof CatalogRoute
   PackageRoute: typeof PackageRoute
   WizardRoute: typeof WizardRoute
+  ApiExportRoute: typeof ApiExportRoute
+  ApiProfileRoute: typeof ApiProfileRoute
   InstructionIdRoute: typeof InstructionIdRoute
 }
 
@@ -134,6 +171,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WizardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/export': {
+      id: '/api/export'
+      path: '/api/export'
+      fullPath: '/api/export'
+      preLoaderRoute: typeof ApiExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/profile': {
+      id: '/api/profile'
+      path: '/api/profile'
+      fullPath: '/api/profile'
+      preLoaderRoute: typeof ApiProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/instruction/$id': {
       id: '/instruction/$id'
       path: '/instruction/$id'
@@ -150,6 +201,8 @@ const rootRouteChildren: RootRouteChildren = {
   CatalogRoute: CatalogRoute,
   PackageRoute: PackageRoute,
   WizardRoute: WizardRoute,
+  ApiExportRoute: ApiExportRoute,
+  ApiProfileRoute: ApiProfileRoute,
   InstructionIdRoute: InstructionIdRoute,
 }
 export const routeTree = rootRouteImport

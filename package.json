@@ -16,7 +16,8 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts && node --import ./scripts/register-ts.mjs --experimental-strip-types --test src/domain/gate.test.ts src/domain/package/package.test.ts src/domain/package/commercial.test.ts",
+    "build:server": "YCHY_SERVER=1 VITE_AUTH_ENABLED=false node scripts/with-app-env.mjs vite build",
+    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts && node --import ./scripts/register-ts.mjs --experimental-strip-types --test src/domain/gate.test.ts src/domain/package/package.test.ts src/domain/package/commercial.test.ts src/domain/package/server-ready.test.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

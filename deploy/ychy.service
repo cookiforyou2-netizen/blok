@@ -1,0 +1,20 @@
+[Unit]
+Description=ychy-pro constructor (beta)
+After=network.target
+
+[Service]
+Type=simple
+User=ychy
+Group=ychy
+WorkingDirectory=/opt/ychy
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+Environment=YCHY_DATA_DIR=/var/lib/ychy
+ExecStart=/usr/bin/node .output/server/index.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
